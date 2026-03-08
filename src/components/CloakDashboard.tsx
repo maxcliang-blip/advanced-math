@@ -21,6 +21,8 @@ import {
 interface CloakDashboardProps {
   onPanic: () => void;
   onLogout: () => void;
+  onProfileChange?: (profile: UserProfile) => void;
+}
 }
 
 const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
