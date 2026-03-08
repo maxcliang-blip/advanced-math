@@ -94,6 +94,34 @@ const ProfileSection = ({ onProfileChange }: ProfileSectionProps) => {
         </div>
       </div>
 
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground flex items-center gap-1">
+          <Timer className="h-3 w-3" /> Auto-Cloak Timer
+        </label>
+        <div className="flex items-center gap-2">
+          {[0, 1, 2, 5, 10, 15].map((min) => (
+            <Button
+              key={min}
+              variant={profile.autoCloakMinutes === min ? "default" : "outline"}
+              size="sm"
+              onClick={() => setProfile((p) => ({ ...p, autoCloakMinutes: min }))}
+              className={
+                profile.autoCloakMinutes === min
+                  ? "text-xs font-mono bg-primary text-primary-foreground"
+                  : "text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"
+              }
+            >
+              {min === 0 ? "Off" : `${min}m`}
+            </Button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {profile.autoCloakMinutes > 0
+            ? `Auto-triggers panic after ${profile.autoCloakMinutes} min of inactivity`
+            : "Disabled — no auto-panic"}
+        </p>
+      </div>
+
       <Button
         onClick={handleSave}
         variant="outline"
