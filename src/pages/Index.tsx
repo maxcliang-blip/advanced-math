@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import PasswordGate from "@/components/PasswordGate";
 import CloakDashboard from "@/components/CloakDashboard";
 import Fake404 from "@/components/Fake404";
+import { loadProfile } from "@/lib/profile";
 
 const Index = () => {
   const [state, setState] = useState<"gate" | "locked" | "unlocked" | "panic">("gate");
+  const [panicKey, setPanicKey] = useState(() => loadProfile().panicKey);
 
   const handlePanic = useCallback(() => {
     setState("panic");
@@ -19,7 +21,7 @@ const Index = () => {
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "`" || e.key === "~") {
+      if (e.key === panicKey || (panicKey === "~" && e.key === "`")) {
         if (state === "unlocked") {
           handlePanic();
         } else if (state === "panic") {
@@ -29,7 +31,7 @@ const Index = () => {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [state, handlePanic]);
+  }, [state, handlePanic, panicKey]);
 
   if (state === "panic") return <Fake404 />;
   if (state === "gate") return <Fake404 onReveal={() => setState("locked")} />;
@@ -38,6 +40,7 @@ const Index = () => {
     <CloakDashboard
       onPanic={handlePanic}
       onLogout={() => setState("gate")}
+      onProfileChange={(p) => setPanicKey(p.panicKey)}
     />
   );
 };
