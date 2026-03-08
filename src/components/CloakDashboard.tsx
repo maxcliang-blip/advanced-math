@@ -12,6 +12,8 @@ import {
   X,
   Bookmark,
   BookmarkPlus,
+  Pencil,
+  Check,
 } from "lucide-react";
 
 interface CloakDashboardProps {
