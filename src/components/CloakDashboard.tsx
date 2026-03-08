@@ -10,6 +10,8 @@ import {
   Settings,
   Clock,
   X,
+  Bookmark,
+  BookmarkPlus,
 } from "lucide-react";
 
 interface CloakDashboardProps {
@@ -22,14 +24,14 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
   const [tabTitle, setTabTitle] = useState("Google");
   const [tabIcon, setTabIcon] = useState("https://www.google.com/favicon.ico");
   const [history, setHistory] = useState<{ url: string; title: string; time: number }[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("cloak_history") || "[]");
-    } catch { return []; }
+    try { return JSON.parse(localStorage.getItem("cloak_history") || "[]"); } catch { return []; }
+  });
+  const [bookmarks, setBookmarks] = useState<{ url: string; label: string; disguise: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem("cloak_bookmarks") || "[]"); } catch { return []; }
   });
 
-  useEffect(() => {
-    localStorage.setItem("cloak_history", JSON.stringify(history));
-  }, [history]);
+  useEffect(() => { localStorage.setItem("cloak_history", JSON.stringify(history)); }, [history]);
+  useEffect(() => { localStorage.setItem("cloak_bookmarks", JSON.stringify(bookmarks)); }, [bookmarks]);
 
   const addToHistory = (target: string) => {
     setHistory((prev) => [
@@ -37,12 +39,16 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
       ...prev.filter((h) => h.url !== target),
     ].slice(0, 20));
   };
-
-  const removeFromHistory = (url: string) => {
-    setHistory((prev) => prev.filter((h) => h.url !== url));
-  };
-
+  const removeFromHistory = (url: string) => setHistory((prev) => prev.filter((h) => h.url !== url));
   const clearHistory = () => setHistory([]);
+
+  const addBookmark = () => {
+    if (!url) return;
+    const target = url.startsWith("http") ? url : `https://${url}`;
+    if (bookmarks.some((b) => b.url === target)) return;
+    setBookmarks((prev) => [...prev, { url: target, label: target.replace(/^https?:\/\//, "").split("/")[0], disguise: tabTitle }]);
+  };
+  const removeBookmark = (bookmarkUrl: string) => setBookmarks((prev) => prev.filter((b) => b.url !== bookmarkUrl));
 
   const openCloaked = () => {
     if (!url) return;
@@ -147,6 +153,15 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
             >
               CLOAK
             </Button>
+            <Button
+              onClick={addBookmark}
+              variant="outline"
+              size="icon"
+              className="border-border text-muted-foreground hover:text-primary hover:border-primary"
+              title="Bookmark this URL"
+            >
+              <BookmarkPlus className="h-4 w-4" />
+            </Button>
           </div>
           <p className="text-xs text-muted-foreground">
             Opens URL inside an about:blank tab with a disguised title & icon
@@ -248,6 +263,34 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
           </section>
         )}
 
+        {/* Bookmarks */}
+        {bookmarks.length > 0 && (
+          <section className="space-y-4 border-t border-border pt-6">
+            <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <Bookmark className="h-4 w-4" /> Bookmarks
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {bookmarks.map((b) => (
+                <div key={b.url} className="group flex items-center gap-1 bg-secondary rounded px-3 py-1.5 border border-border hover:border-primary transition-colors">
+                  <button
+                    onClick={() => setUrl(b.url)}
+                    className="text-sm font-mono text-foreground hover:text-primary transition-colors truncate max-w-[200px]"
+                  >
+                    {b.label}
+                  </button>
+                  <Button
+                    onClick={() => removeBookmark(b.url)}
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Settings */}
         <section className="space-y-4 border-t border-border pt-6">
