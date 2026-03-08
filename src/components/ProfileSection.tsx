@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Save } from "lucide-react";
+import { User, Save, Timer } from "lucide-react";
 import { loadProfile, saveProfile, type UserProfile } from "@/lib/profile";
 
 interface ProfileSectionProps {
