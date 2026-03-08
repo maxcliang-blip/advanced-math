@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ProfileSection from "@/components/ProfileSection";
+import { loadProfile, type UserProfile } from "@/lib/profile";
 import {
   EyeOff,
   ExternalLink,
@@ -19,9 +21,11 @@ import {
 interface CloakDashboardProps {
   onPanic: () => void;
   onLogout: () => void;
+  onProfileChange?: (profile: UserProfile) => void;
 }
 
-const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
+const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardProps) => {
+  const [profile, setProfile] = useState<UserProfile>(loadProfile);
   const [url, setUrl] = useState("");
   const [tabTitle, setTabTitle] = useState("Google");
   const [tabIcon, setTabIcon] = useState("https://www.google.com/favicon.ico");
@@ -117,6 +121,9 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
           <h1 className="text-xl font-display font-bold text-primary glow-text">
             CLOAK
           </h1>
+          <span className="text-xs font-mono text-muted-foreground ml-2">
+            Welcome, {profile.displayName}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -334,6 +341,14 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
           </section>
         )}
 
+        {/* Profile */}
+        <ProfileSection
+          onProfileChange={(p) => {
+            setProfile(p);
+            onProfileChange?.(p);
+          }}
+        />
+
         {/* Settings */}
         <section className="space-y-4 border-t border-border pt-6">
           <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
@@ -352,7 +367,7 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
 
       <footer className="border-t border-border px-6 py-3 text-center">
         <p className="text-xs text-muted-foreground font-mono">
-          Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-foreground">~</kbd> for panic mode
+          Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-foreground">{profile.panicKey === " " ? "Space" : profile.panicKey}</kbd> for panic mode
         </p>
       </footer>
     </div>
