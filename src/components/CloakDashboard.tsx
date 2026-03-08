@@ -263,6 +263,34 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
           </section>
         )}
 
+        {/* Bookmarks */}
+        {bookmarks.length > 0 && (
+          <section className="space-y-4 border-t border-border pt-6">
+            <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <Bookmark className="h-4 w-4" /> Bookmarks
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {bookmarks.map((b) => (
+                <div key={b.url} className="group flex items-center gap-1 bg-secondary rounded px-3 py-1.5 border border-border hover:border-primary transition-colors">
+                  <button
+                    onClick={() => setUrl(b.url)}
+                    className="text-sm font-mono text-foreground hover:text-primary transition-colors truncate max-w-[200px]"
+                  >
+                    {b.label}
+                  </button>
+                  <Button
+                    onClick={() => removeBookmark(b.url)}
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Settings */}
         <section className="space-y-4 border-t border-border pt-6">
