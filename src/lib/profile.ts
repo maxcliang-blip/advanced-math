@@ -2,6 +2,7 @@ export interface UserProfile {
   displayName: string;
   defaultDisguise: string;
   panicKey: string;
+  autoCloakMinutes: number; // 0 = disabled
 }
 
 const STORAGE_KEY = "cloak_profile";
@@ -10,6 +11,7 @@ const defaults: UserProfile = {
   displayName: "Agent",
   defaultDisguise: "Google",
   panicKey: "~",
+  autoCloakMinutes: 0,
 };
 
 export function loadProfile(): UserProfile {

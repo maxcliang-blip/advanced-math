@@ -7,6 +7,7 @@ import { loadProfile } from "@/lib/profile";
 const Index = () => {
   const [state, setState] = useState<"gate" | "locked" | "unlocked" | "panic">("gate");
   const [panicKey, setPanicKey] = useState(() => loadProfile().panicKey);
+  const [autoCloakMinutes, setAutoCloakMinutes] = useState(() => loadProfile().autoCloakMinutes);
 
   const handlePanic = useCallback(() => {
     setState("panic");
@@ -18,6 +19,26 @@ const Index = () => {
     link.href = "";
     document.head.appendChild(link);
   }, []);
+
+  // Auto-cloak inactivity timer
+  useEffect(() => {
+    if (state !== "unlocked" || autoCloakMinutes <= 0) return;
+
+    let timer: ReturnType<typeof setTimeout>;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(handlePanic, autoCloakMinutes * 60 * 1000);
+    };
+
+    const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, resetTimer));
+    resetTimer();
+
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, resetTimer));
+    };
+  }, [state, autoCloakMinutes, handlePanic]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -40,7 +61,7 @@ const Index = () => {
     <CloakDashboard
       onPanic={handlePanic}
       onLogout={() => setState("gate")}
-      onProfileChange={(p) => setPanicKey(p.panicKey)}
+      onProfileChange={(p) => { setPanicKey(p.panicKey); setAutoCloakMinutes(p.autoCloakMinutes); }}
     />
   );
 };
