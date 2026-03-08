@@ -246,7 +246,8 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
               ))}
             </div>
           </section>
-        )
+        )}
+
 
         {/* Settings */}
         <section className="space-y-4 border-t border-border pt-6">
