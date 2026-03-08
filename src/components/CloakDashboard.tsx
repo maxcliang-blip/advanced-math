@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ProfileSection from "@/components/ProfileSection";
+import { loadProfile, type UserProfile } from "@/lib/profile";
 import {
   EyeOff,
   ExternalLink,
