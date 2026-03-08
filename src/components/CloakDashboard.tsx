@@ -51,6 +51,11 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
     setBookmarks((prev) => [...prev, { url: target, label: target.replace(/^https?:\/\//, "").split("/")[0], disguise: tabTitle }]);
   };
   const removeBookmark = (bookmarkUrl: string) => setBookmarks((prev) => prev.filter((b) => b.url !== bookmarkUrl));
+  const renameBookmark = (bookmarkUrl: string, newLabel: string) => {
+    setBookmarks((prev) => prev.map((b) => b.url === bookmarkUrl ? { ...b, label: newLabel } : b));
+  };
+  const [editingBookmark, setEditingBookmark] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
 
   const openCloaked = () => {
     if (!url) return;
