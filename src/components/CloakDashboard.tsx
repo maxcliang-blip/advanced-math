@@ -121,6 +121,9 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
           <h1 className="text-xl font-display font-bold text-primary glow-text">
             CLOAK
           </h1>
+          <span className="text-xs font-mono text-muted-foreground ml-2">
+            Welcome, {profile.displayName}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <Button
