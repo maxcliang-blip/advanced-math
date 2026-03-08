@@ -4,7 +4,7 @@ import CloakDashboard from "@/components/CloakDashboard";
 import Fake404 from "@/components/Fake404";
 
 const Index = () => {
-  const [state, setState] = useState<"locked" | "unlocked" | "panic">("locked");
+  const [state, setState] = useState<"gate" | "locked" | "unlocked" | "panic">("gate");
 
   const handlePanic = useCallback(() => {
     setState("panic");
@@ -23,7 +23,7 @@ const Index = () => {
         if (state === "unlocked") {
           handlePanic();
         } else if (state === "panic") {
-          setState("locked");
+          setState("gate");
         }
       }
     };
@@ -32,11 +32,12 @@ const Index = () => {
   }, [state, handlePanic]);
 
   if (state === "panic") return <Fake404 />;
+  if (state === "gate") return <Fake404 onReveal={() => setState("locked")} />;
   if (state === "locked") return <PasswordGate onUnlock={() => setState("unlocked")} />;
   return (
     <CloakDashboard
       onPanic={handlePanic}
-      onLogout={() => setState("locked")}
+      onLogout={() => setState("gate")}
     />
   );
 };

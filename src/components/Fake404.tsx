@@ -1,4 +1,8 @@
-const Fake404 = () => {
+interface Fake404Props {
+  onReveal?: () => void;
+}
+
+const Fake404 = ({ onReveal }: Fake404Props) => {
   return (
     <div
       style={{
@@ -14,7 +18,14 @@ const Fake404 = () => {
         This page isn't working
       </h1>
       <p style={{ fontSize: "14px", color: "#666", margin: "0 0 20px" }}>
-        <strong>{window.location.hostname}</strong> didn't send any data.
+        <strong>{window.location.hostname}</strong> didn't send any data
+        {onReveal ? (
+          <span
+            onClick={onReveal}
+            style={{ cursor: "default", userSelect: "none" }}
+            title=""
+          >.</span>
+        ) : "."}
       </p>
       <p style={{ fontSize: "14px", color: "#666" }}>ERR_EMPTY_RESPONSE</p>
       <hr style={{ border: "none", borderTop: "1px solid #ddd", margin: "30px 0" }} />
