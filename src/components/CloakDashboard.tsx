@@ -25,7 +25,8 @@ interface CloakDashboardProps {
 }
 }
 
-const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
+const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardProps) => {
+  const [profile, setProfile] = useState<UserProfile>(loadProfile);
   const [url, setUrl] = useState("");
   const [tabTitle, setTabTitle] = useState("Google");
   const [tabIcon, setTabIcon] = useState("https://www.google.com/favicon.ico");
