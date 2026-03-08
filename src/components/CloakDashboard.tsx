@@ -203,6 +203,51 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
           </Button>
         </section>
 
+        {/* History */}
+        {history.length > 0 && (
+          <section className="space-y-4 border-t border-border pt-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Clock className="h-4 w-4" /> Recent History
+              </h2>
+              <Button
+                onClick={clearHistory}
+                variant="ghost"
+                size="sm"
+                className="text-xs font-mono text-muted-foreground hover:text-destructive"
+              >
+                Clear All
+              </Button>
+            </div>
+            <div className="space-y-1">
+              {history.map((h) => (
+                <div
+                  key={h.url + h.time}
+                  className="flex items-center gap-2 group rounded px-2 py-1.5 hover:bg-secondary"
+                >
+                  <button
+                    onClick={() => { setUrl(h.url); }}
+                    className="flex-1 text-left text-sm font-mono text-foreground truncate hover:text-primary transition-colors"
+                  >
+                    {h.url}
+                  </button>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(h.time).toLocaleDateString()}
+                  </span>
+                  <Button
+                    onClick={() => removeFromHistory(h.url)}
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )
+
         {/* Settings */}
         <section className="space-y-4 border-t border-border pt-6">
           <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
