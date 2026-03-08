@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,6 +8,8 @@ import {
   AlertTriangle,
   Trash2,
   Settings,
+  Clock,
+  X,
 } from "lucide-react";
 
 interface CloakDashboardProps {
@@ -19,10 +21,33 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
   const [url, setUrl] = useState("");
   const [tabTitle, setTabTitle] = useState("Google");
   const [tabIcon, setTabIcon] = useState("https://www.google.com/favicon.ico");
+  const [history, setHistory] = useState<{ url: string; title: string; time: number }[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("cloak_history") || "[]");
+    } catch { return []; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("cloak_history", JSON.stringify(history));
+  }, [history]);
+
+  const addToHistory = (target: string) => {
+    setHistory((prev) => [
+      { url: target, title: tabTitle, time: Date.now() },
+      ...prev.filter((h) => h.url !== target),
+    ].slice(0, 20));
+  };
+
+  const removeFromHistory = (url: string) => {
+    setHistory((prev) => prev.filter((h) => h.url !== url));
+  };
+
+  const clearHistory = () => setHistory([]);
 
   const openCloaked = () => {
     if (!url) return;
     const target = url.startsWith("http") ? url : `https://${url}`;
+    addToHistory(target);
     const win = window.open("about:blank", "_blank");
     if (win) {
       win.document.write(`
@@ -177,6 +202,52 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
             Apply Disguise to This Tab
           </Button>
         </section>
+
+        {/* History */}
+        {history.length > 0 && (
+          <section className="space-y-4 border-t border-border pt-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Clock className="h-4 w-4" /> Recent History
+              </h2>
+              <Button
+                onClick={clearHistory}
+                variant="ghost"
+                size="sm"
+                className="text-xs font-mono text-muted-foreground hover:text-destructive"
+              >
+                Clear All
+              </Button>
+            </div>
+            <div className="space-y-1">
+              {history.map((h) => (
+                <div
+                  key={h.url + h.time}
+                  className="flex items-center gap-2 group rounded px-2 py-1.5 hover:bg-secondary"
+                >
+                  <button
+                    onClick={() => { setUrl(h.url); }}
+                    className="flex-1 text-left text-sm font-mono text-foreground truncate hover:text-primary transition-colors"
+                  >
+                    {h.url}
+                  </button>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(h.time).toLocaleDateString()}
+                  </span>
+                  <Button
+                    onClick={() => removeFromHistory(h.url)}
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
 
         {/* Settings */}
         <section className="space-y-4 border-t border-border pt-6">
