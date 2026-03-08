@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,6 +8,8 @@ import {
   AlertTriangle,
   Trash2,
   Settings,
+  Clock,
+  X,
 } from "lucide-react";
 
 interface CloakDashboardProps {
