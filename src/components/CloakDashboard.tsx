@@ -341,6 +341,14 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
           </section>
         )}
 
+        {/* Profile */}
+        <ProfileSection
+          onProfileChange={(p) => {
+            setProfile(p);
+            onProfileChange?.(p);
+          }}
+        />
+
         {/* Settings */}
         <section className="space-y-4 border-t border-border pt-6">
           <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
