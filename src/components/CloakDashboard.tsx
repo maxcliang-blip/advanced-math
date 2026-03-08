@@ -21,6 +21,28 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
   const [url, setUrl] = useState("");
   const [tabTitle, setTabTitle] = useState("Google");
   const [tabIcon, setTabIcon] = useState("https://www.google.com/favicon.ico");
+  const [history, setHistory] = useState<{ url: string; title: string; time: number }[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("cloak_history") || "[]");
+    } catch { return []; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("cloak_history", JSON.stringify(history));
+  }, [history]);
+
+  const addToHistory = (target: string) => {
+    setHistory((prev) => [
+      { url: target, title: tabTitle, time: Date.now() },
+      ...prev.filter((h) => h.url !== target),
+    ].slice(0, 20));
+  };
+
+  const removeFromHistory = (url: string) => {
+    setHistory((prev) => prev.filter((h) => h.url !== url));
+  };
+
+  const clearHistory = () => setHistory([]);
 
   const openCloaked = () => {
     if (!url) return;
