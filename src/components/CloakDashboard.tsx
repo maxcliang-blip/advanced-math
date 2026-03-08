@@ -47,6 +47,7 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
   const openCloaked = () => {
     if (!url) return;
     const target = url.startsWith("http") ? url : `https://${url}`;
+    addToHistory(target);
     const win = window.open("about:blank", "_blank");
     if (win) {
       win.document.write(`
