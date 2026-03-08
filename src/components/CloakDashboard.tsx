@@ -24,14 +24,14 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
   const [tabTitle, setTabTitle] = useState("Google");
   const [tabIcon, setTabIcon] = useState("https://www.google.com/favicon.ico");
   const [history, setHistory] = useState<{ url: string; title: string; time: number }[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("cloak_history") || "[]");
-    } catch { return []; }
+    try { return JSON.parse(localStorage.getItem("cloak_history") || "[]"); } catch { return []; }
+  });
+  const [bookmarks, setBookmarks] = useState<{ url: string; label: string; disguise: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem("cloak_bookmarks") || "[]"); } catch { return []; }
   });
 
-  useEffect(() => {
-    localStorage.setItem("cloak_history", JSON.stringify(history));
-  }, [history]);
+  useEffect(() => { localStorage.setItem("cloak_history", JSON.stringify(history)); }, [history]);
+  useEffect(() => { localStorage.setItem("cloak_bookmarks", JSON.stringify(bookmarks)); }, [bookmarks]);
 
   const addToHistory = (target: string) => {
     setHistory((prev) => [
@@ -39,12 +39,16 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
       ...prev.filter((h) => h.url !== target),
     ].slice(0, 20));
   };
-
-  const removeFromHistory = (url: string) => {
-    setHistory((prev) => prev.filter((h) => h.url !== url));
-  };
-
+  const removeFromHistory = (url: string) => setHistory((prev) => prev.filter((h) => h.url !== url));
   const clearHistory = () => setHistory([]);
+
+  const addBookmark = () => {
+    if (!url) return;
+    const target = url.startsWith("http") ? url : `https://${url}`;
+    if (bookmarks.some((b) => b.url === target)) return;
+    setBookmarks((prev) => [...prev, { url: target, label: target.replace(/^https?:\/\//, "").split("/")[0], disguise: tabTitle }]);
+  };
+  const removeBookmark = (bookmarkUrl: string) => setBookmarks((prev) => prev.filter((b) => b.url !== bookmarkUrl));
 
   const openCloaked = () => {
     if (!url) return;
