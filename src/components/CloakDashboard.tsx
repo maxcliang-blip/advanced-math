@@ -153,6 +153,15 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
             >
               CLOAK
             </Button>
+            <Button
+              onClick={addBookmark}
+              variant="outline"
+              size="icon"
+              className="border-border text-muted-foreground hover:text-primary hover:border-primary"
+              title="Bookmark this URL"
+            >
+              <BookmarkPlus className="h-4 w-4" />
+            </Button>
           </div>
           <p className="text-xs text-muted-foreground">
             Opens URL inside an about:blank tab with a disguised title & icon
