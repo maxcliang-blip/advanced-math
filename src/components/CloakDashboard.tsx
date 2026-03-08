@@ -279,12 +279,47 @@ const CloakDashboard = ({ onPanic, onLogout }: CloakDashboardProps) => {
             <div className="flex flex-wrap gap-2">
               {bookmarks.map((b) => (
                 <div key={b.url} className="group flex items-center gap-1 bg-secondary rounded px-3 py-1.5 border border-border hover:border-primary transition-colors">
-                  <button
-                    onClick={() => setUrl(b.url)}
-                    className="text-sm font-mono text-foreground hover:text-primary transition-colors truncate max-w-[200px]"
-                  >
-                    {b.label}
-                  </button>
+                  {editingBookmark === b.url ? (
+                    <form
+                      className="flex items-center gap-1"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        renameBookmark(b.url, editLabel || b.label);
+                        setEditingBookmark(null);
+                      }}
+                    >
+                      <Input
+                        value={editLabel}
+                        onChange={(e) => setEditLabel(e.target.value)}
+                        className="h-6 w-32 text-xs font-mono bg-background border-primary px-1"
+                        autoFocus
+                        onBlur={() => {
+                          renameBookmark(b.url, editLabel || b.label);
+                          setEditingBookmark(null);
+                        }}
+                      />
+                      <Button type="submit" variant="ghost" size="sm" className="h-5 w-5 p-0 text-primary">
+                        <Check className="h-3 w-3" />
+                      </Button>
+                    </form>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setUrl(b.url)}
+                        className="text-sm font-mono text-foreground hover:text-primary transition-colors truncate max-w-[200px]"
+                      >
+                        {b.label}
+                      </button>
+                      <Button
+                        onClick={() => { setEditingBookmark(b.url); setEditLabel(b.label); }}
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </>
+                  )}
                   <Button
                     onClick={() => removeBookmark(b.url)}
                     variant="ghost"
