@@ -61,7 +61,7 @@ const Index = () => {
     <CloakDashboard
       onPanic={handlePanic}
       onLogout={() => setState("gate")}
-      onProfileChange={(p) => setPanicKey(p.panicKey)}
+      onProfileChange={(p) => { setPanicKey(p.panicKey); setAutoCloakMinutes(p.autoCloakMinutes); }}
     />
   );
 };
