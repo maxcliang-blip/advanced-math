@@ -10,6 +10,8 @@ import {
   Settings,
   Clock,
   X,
+  Bookmark,
+  BookmarkPlus,
 } from "lucide-react";
 
 interface CloakDashboardProps {
