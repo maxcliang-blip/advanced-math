@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ProfileSection from "@/components/ProfileSection";
 import { loadProfile, type UserProfile } from "@/lib/profile";
+import { themes, loadTheme, applyTheme } from "@/lib/themes";
+import { tabPresets, applyCloakPreset, loadActiveCloak, clearCloak, type TabPreset } from "@/lib/tabCloak";
 import {
   EyeOff,
   ExternalLink,
@@ -22,12 +24,24 @@ import {
   RotateCw,
   Maximize2,
   Minimize2,
+  Palette,
+  FolderPlus,
+  Folder,
+  Eye,
+  EyeOff as EyeOffIcon,
+  ShieldCheck,
 } from "lucide-react";
 
 interface CloakDashboardProps {
   onPanic: () => void;
   onLogout: () => void;
   onProfileChange?: (profile: UserProfile) => void;
+}
+
+interface BookmarkItem {
+  url: string;
+  label: string;
+  folder: string;
 }
 
 const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardProps) => {
@@ -38,9 +52,26 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   const [history, setHistory] = useState<{ url: string; title: string; time: number }[]>(() => {
     try { return JSON.parse(localStorage.getItem("cloak_history") || "[]"); } catch { return []; }
   });
-  const [bookmarks, setBookmarks] = useState<{ url: string; label: string; disguise: string }[]>(() => {
-    try { return JSON.parse(localStorage.getItem("cloak_bookmarks") || "[]"); } catch { return []; }
+
+  // Bookmarks with folders
+  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
+    try { return JSON.parse(localStorage.getItem("cloak_bookmarks_v2") || "[]"); } catch { return []; }
   });
+  const [bookmarkFolders, setBookmarkFolders] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("cloak_bm_folders") || '["General"]'); } catch { return ["General"]; }
+  });
+  const [activeFolder, setActiveFolder] = useState("General");
+  const [newFolderName, setNewFolderName] = useState("");
+  const [addingFolder, setAddingFolder] = useState(false);
+
+  // Theme
+  const [currentTheme, setCurrentTheme] = useState(loadTheme);
+
+  // Incognito mode
+  const [incognito, setIncognito] = useState(() => localStorage.getItem("cloak_incognito") === "true");
+
+  // Tab cloaking
+  const [activeCloak, setActiveCloak] = useState<TabPreset | null>(loadActiveCloak);
 
   // Proxy browser state
   const [proxyUrl, setProxyUrl] = useState("");
@@ -51,8 +82,35 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   const [proxyHistoryIndex, setProxyHistoryIndex] = useState(-1);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  useEffect(() => { localStorage.setItem("cloak_history", JSON.stringify(history)); }, [history]);
-  useEffect(() => { localStorage.setItem("cloak_bookmarks", JSON.stringify(bookmarks)); }, [bookmarks]);
+  const [editingBookmark, setEditingBookmark] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+
+  // Apply theme on load
+  useEffect(() => { applyTheme(currentTheme); }, []);
+
+  // Apply tab cloak on load
+  useEffect(() => {
+    if (activeCloak) applyCloakPreset(activeCloak);
+  }, []);
+
+  // Incognito: clear on unload
+  useEffect(() => {
+    if (!incognito) return;
+    const handleUnload = () => {
+      localStorage.removeItem("cloak_history");
+      localStorage.removeItem("cloak_bookmarks_v2");
+      localStorage.removeItem("cloak_bm_folders");
+      clearCloak();
+      setHistory([]);
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [incognito]);
+
+  useEffect(() => { if (!incognito) localStorage.setItem("cloak_history", JSON.stringify(history)); }, [history, incognito]);
+  useEffect(() => { if (!incognito) localStorage.setItem("cloak_bookmarks_v2", JSON.stringify(bookmarks)); }, [bookmarks, incognito]);
+  useEffect(() => { if (!incognito) localStorage.setItem("cloak_bm_folders", JSON.stringify(bookmarkFolders)); }, [bookmarkFolders, incognito]);
+  useEffect(() => { localStorage.setItem("cloak_incognito", String(incognito)); }, [incognito]);
 
   const addToHistory = (target: string) => {
     setHistory((prev) => [
@@ -67,21 +125,31 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
     if (!url) return;
     const target = url.startsWith("http") ? url : `https://${url}`;
     if (bookmarks.some((b) => b.url === target)) return;
-    setBookmarks((prev) => [...prev, { url: target, label: target.replace(/^https?:\/\//, "").split("/")[0], disguise: tabTitle }]);
+    setBookmarks((prev) => [...prev, { url: target, label: target.replace(/^https?:\/\//, "").split("/")[0], folder: activeFolder }]);
   };
   const removeBookmark = (bookmarkUrl: string) => setBookmarks((prev) => prev.filter((b) => b.url !== bookmarkUrl));
   const renameBookmark = (bookmarkUrl: string, newLabel: string) => {
     setBookmarks((prev) => prev.map((b) => b.url === bookmarkUrl ? { ...b, label: newLabel } : b));
   };
-  const [editingBookmark, setEditingBookmark] = useState<string | null>(null);
-  const [editLabel, setEditLabel] = useState("");
+  const addFolder = () => {
+    if (!newFolderName || bookmarkFolders.includes(newFolderName)) return;
+    setBookmarkFolders((prev) => [...prev, newFolderName]);
+    setActiveFolder(newFolderName);
+    setNewFolderName("");
+    setAddingFolder(false);
+  };
+  const removeFolder = (folder: string) => {
+    if (folder === "General") return;
+    setBookmarks((prev) => prev.map((b) => b.folder === folder ? { ...b, folder: "General" } : b));
+    setBookmarkFolders((prev) => prev.filter((f) => f !== folder));
+    if (activeFolder === folder) setActiveFolder("General");
+  };
 
   const navigateProxy = (inputUrl?: string) => {
     const raw = inputUrl || proxyInput;
     if (!raw) return;
     let target = raw;
     if (!target.startsWith("http")) {
-      // If it looks like a URL, add https, otherwise search
       if (target.includes(".") && !target.includes(" ")) {
         target = `https://${target}`;
       } else {
@@ -92,7 +160,6 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
     setProxyInput(target);
     setProxyActive(true);
     addToHistory(target);
-    // Update proxy navigation history
     setProxyHistory((prev) => {
       const newHistory = [...prev.slice(0, proxyHistoryIndex + 1), target];
       setProxyHistoryIndex(newHistory.length - 1);
@@ -152,13 +219,14 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   };
 
   const cloakCurrentTab = () => {
-    document.title = tabTitle;
-    const link =
-      (document.querySelector("link[rel~='icon']") as HTMLLinkElement) ||
-      document.createElement("link");
-    link.rel = "icon";
-    link.href = tabIcon;
-    document.head.appendChild(link);
+    const preset: TabPreset = { name: "Custom", title: tabTitle, icon: tabIcon };
+    applyCloakPreset(preset);
+    setActiveCloak(preset);
+  };
+
+  const handleThemeChange = (name: string) => {
+    applyTheme(name);
+    setCurrentTheme(name);
   };
 
   const resetPassword = () => {
@@ -167,13 +235,6 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
       onLogout();
     }
   };
-
-  const presets = [
-    { name: "Google", title: "Google", icon: "https://www.google.com/favicon.ico" },
-    { name: "Google Docs", title: "Google Docs", icon: "https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico" },
-    { name: "Canvas", title: "Dashboard", icon: "https://du11hjcvx0uqb.cloudfront.net/dist/images/favicon-e10d657a73.ico" },
-    { name: "Wikipedia", title: "Wikipedia", icon: "https://en.wikipedia.org/static/favicon/wikipedia.ico" },
-  ];
 
   // Fullscreen proxy view
   if (proxyFullscreen && proxyActive) {
@@ -215,6 +276,8 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
     );
   }
 
+  const filteredBookmarks = bookmarks.filter((b) => b.folder === activeFolder);
+
   return (
     <div className="flex min-h-screen flex-col bg-background scanline">
       {/* Header */}
@@ -227,8 +290,23 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
           <span className="text-xs font-mono text-muted-foreground ml-2">
             Welcome, {profile.displayName}
           </span>
+          {incognito && (
+            <span className="text-xs font-mono text-destructive flex items-center gap-1 ml-2">
+              <ShieldCheck className="h-3 w-3" /> INCOGNITO
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setIncognito(!incognito)}
+            variant="outline"
+            size="sm"
+            className={`gap-1 font-mono text-xs border-border ${incognito ? "text-destructive border-destructive/50" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
+            title={incognito ? "Incognito ON — data cleared on exit" : "Enable incognito mode"}
+          >
+            {incognito ? <EyeOffIcon className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+            {incognito ? "INCOG" : "INCOG"}
+          </Button>
           <Button
             onClick={onPanic}
             variant="destructive"
@@ -373,10 +451,10 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
           </p>
         </section>
 
-        {/* Tab Disguise */}
+        {/* Tab Cloaking */}
         <section className="space-y-4 border-t border-border pt-6">
           <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-            <Settings className="h-4 w-4" /> Tab Disguise
+            <Settings className="h-4 w-4" /> Tab Cloaking
           </h2>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -397,30 +475,78 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {presets.map((p) => (
+          <div className="space-y-2">
+            <label className="text-xs text-muted-foreground">Quick Presets</label>
+            <div className="flex flex-wrap gap-2">
+              {tabPresets.map((p) => (
+                <Button
+                  key={p.name}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setTabTitle(p.title);
+                    setTabIcon(p.icon);
+                    applyCloakPreset(p);
+                    setActiveCloak(p);
+                  }}
+                  className={`text-xs font-mono border-border hover:border-primary hover:bg-secondary ${
+                    activeCloak?.name === p.name ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {p.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={cloakCurrentTab}
+              variant="outline"
+              className="flex-1 border-primary/30 text-foreground hover:bg-primary/10 hover:border-primary font-mono text-sm"
+            >
+              Apply Custom Disguise
+            </Button>
+            {activeCloak && (
               <Button
-                key={p.name}
+                onClick={() => { clearCloak(); setActiveCloak(null); document.title = "CLOAK"; }}
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setTabTitle(p.title);
-                  setTabIcon(p.icon);
-                }}
-                className="text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"
+                className="text-xs font-mono border-border text-muted-foreground hover:text-destructive hover:border-destructive"
               >
-                {p.name}
+                <X className="h-3 w-3 mr-1" /> Clear
+              </Button>
+            )}
+          </div>
+          {activeCloak && (
+            <p className="text-xs text-primary font-mono">Active: {activeCloak.title}</p>
+          )}
+        </section>
+
+        {/* Themes */}
+        <section className="space-y-4 border-t border-border pt-6">
+          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+            <Palette className="h-4 w-4" /> Themes
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {themes.map((t) => (
+              <Button
+                key={t.name}
+                variant="outline"
+                size="sm"
+                onClick={() => handleThemeChange(t.name)}
+                className={`text-xs font-mono border-border hover:border-primary hover:bg-secondary ${
+                  currentTheme === t.name ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span
+                  className="inline-block w-3 h-3 rounded-full mr-1.5 border border-border"
+                  style={{ backgroundColor: `hsl(${t.vars["--primary"]})` }}
+                />
+                {t.label}
               </Button>
             ))}
           </div>
-
-          <Button
-            onClick={cloakCurrentTab}
-            variant="outline"
-            className="w-full border-primary/30 text-foreground hover:bg-primary/10 hover:border-primary font-mono text-sm"
-          >
-            Apply Disguise to This Tab
-          </Button>
         </section>
 
         {/* History */}
@@ -468,14 +594,67 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
           </section>
         )}
 
-        {/* Bookmarks */}
-        {bookmarks.length > 0 && (
-          <section className="space-y-4 border-t border-border pt-6">
-            <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-              <Bookmark className="h-4 w-4" /> Bookmarks
-            </h2>
+        {/* Bookmarks with Folders */}
+        <section className="space-y-4 border-t border-border pt-6">
+          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+            <Bookmark className="h-4 w-4" /> Bookmarks
+          </h2>
+
+          {/* Folder tabs */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {bookmarkFolders.map((folder) => (
+              <div key={folder} className="group flex items-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveFolder(folder)}
+                  className={`text-xs font-mono border-border hover:border-primary ${
+                    activeFolder === folder ? "text-primary border-primary bg-secondary" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Folder className="h-3 w-3 mr-1" />
+                  {folder}
+                  {folder !== "General" && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeFolder(folder); }}
+                      className="ml-1 opacity-0 group-hover:opacity-100 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </Button>
+              </div>
+            ))}
+            {addingFolder ? (
+              <form onSubmit={(e) => { e.preventDefault(); addFolder(); }} className="flex items-center gap-1">
+                <Input
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  className="h-8 w-28 text-xs font-mono bg-secondary border-primary px-2"
+                  placeholder="Folder name"
+                  autoFocus
+                  onBlur={() => { if (!newFolderName) setAddingFolder(false); }}
+                />
+                <Button type="submit" variant="ghost" size="sm" className="h-7 w-7 p-0 text-primary">
+                  <Check className="h-3 w-3" />
+                </Button>
+              </form>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAddingFolder(true)}
+                className="h-8 text-xs text-muted-foreground hover:text-primary"
+              >
+                <FolderPlus className="h-3 w-3 mr-1" /> Add Folder
+              </Button>
+            )}
+          </div>
+
+          {/* Bookmarks in active folder */}
+          {filteredBookmarks.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {bookmarks.map((b) => (
+              {filteredBookmarks.map((b) => (
                 <div key={b.url} className="group flex items-center gap-1 bg-secondary rounded px-3 py-1.5 border border-border hover:border-primary transition-colors">
                   {editingBookmark === b.url ? (
                     <form
@@ -529,8 +708,10 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
                 </div>
               ))}
             </div>
-          </section>
-        )}
+          ) : (
+            <p className="text-xs text-muted-foreground font-mono">No bookmarks in "{activeFolder}" — use the <BookmarkPlus className="inline h-3 w-3" /> button to add one</p>
+          )}
+        </section>
 
         {/* Profile */}
         <ProfileSection
@@ -545,20 +726,38 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
           <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
             <Trash2 className="h-4 w-4" /> Settings
           </h2>
-          <Button
-            onClick={resetPassword}
-            variant="outline"
-            size="sm"
-            className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10"
-          >
-            Reset Password
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={resetPassword}
+              variant="outline"
+              size="sm"
+              className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10"
+            >
+              Reset Password
+            </Button>
+            <Button
+              onClick={() => {
+                clearHistory();
+                setBookmarks([]);
+                clearCloak();
+                setActiveCloak(null);
+                localStorage.removeItem("cloak_history");
+                localStorage.removeItem("cloak_bookmarks_v2");
+              }}
+              variant="outline"
+              size="sm"
+              className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10"
+            >
+              Wipe All Data
+            </Button>
+          </div>
         </section>
       </main>
 
       <footer className="border-t border-border px-6 py-3 text-center">
         <p className="text-xs text-muted-foreground font-mono">
           Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-foreground">{profile.panicKey === " " ? "Space" : profile.panicKey}</kbd> for panic mode
+          {incognito && " · Incognito active — data will be cleared on exit"}
         </p>
       </footer>
     </div>
