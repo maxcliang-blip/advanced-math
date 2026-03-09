@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ProfileSection from "@/components/ProfileSection";
@@ -16,6 +16,12 @@ import {
   BookmarkPlus,
   Pencil,
   Check,
+  Globe,
+  ArrowLeft,
+  ArrowRight,
+  RotateCw,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 interface CloakDashboardProps {
@@ -35,6 +41,15 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   const [bookmarks, setBookmarks] = useState<{ url: string; label: string; disguise: string }[]>(() => {
     try { return JSON.parse(localStorage.getItem("cloak_bookmarks") || "[]"); } catch { return []; }
   });
+
+  // Proxy browser state
+  const [proxyUrl, setProxyUrl] = useState("");
+  const [proxyInput, setProxyInput] = useState("");
+  const [proxyActive, setProxyActive] = useState(false);
+  const [proxyFullscreen, setProxyFullscreen] = useState(false);
+  const [proxyHistory, setProxyHistory] = useState<string[]>([]);
+  const [proxyHistoryIndex, setProxyHistoryIndex] = useState(-1);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => { localStorage.setItem("cloak_history", JSON.stringify(history)); }, [history]);
   useEffect(() => { localStorage.setItem("cloak_bookmarks", JSON.stringify(bookmarks)); }, [bookmarks]);
@@ -60,6 +75,54 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   };
   const [editingBookmark, setEditingBookmark] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
+
+  const navigateProxy = (inputUrl?: string) => {
+    const raw = inputUrl || proxyInput;
+    if (!raw) return;
+    let target = raw;
+    if (!target.startsWith("http")) {
+      // If it looks like a URL, add https, otherwise search
+      if (target.includes(".") && !target.includes(" ")) {
+        target = `https://${target}`;
+      } else {
+        target = `https://www.google.com/search?igu=1&q=${encodeURIComponent(target)}`;
+      }
+    }
+    setProxyUrl(target);
+    setProxyInput(target);
+    setProxyActive(true);
+    addToHistory(target);
+    // Update proxy navigation history
+    setProxyHistory((prev) => {
+      const newHistory = [...prev.slice(0, proxyHistoryIndex + 1), target];
+      setProxyHistoryIndex(newHistory.length - 1);
+      return newHistory;
+    });
+  };
+
+  const proxyGoBack = () => {
+    if (proxyHistoryIndex > 0) {
+      const newIndex = proxyHistoryIndex - 1;
+      setProxyHistoryIndex(newIndex);
+      setProxyUrl(proxyHistory[newIndex]);
+      setProxyInput(proxyHistory[newIndex]);
+    }
+  };
+
+  const proxyGoForward = () => {
+    if (proxyHistoryIndex < proxyHistory.length - 1) {
+      const newIndex = proxyHistoryIndex + 1;
+      setProxyHistoryIndex(newIndex);
+      setProxyUrl(proxyHistory[newIndex]);
+      setProxyInput(proxyHistory[newIndex]);
+    }
+  };
+
+  const proxyRefresh = () => {
+    if (iframeRef.current && proxyUrl) {
+      iframeRef.current.src = proxyUrl;
+    }
+  };
 
   const openCloaked = () => {
     if (!url) return;
@@ -112,6 +175,46 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
     { name: "Wikipedia", title: "Wikipedia", icon: "https://en.wikipedia.org/static/favicon/wikipedia.ico" },
   ];
 
+  // Fullscreen proxy view
+  if (proxyFullscreen && proxyActive) {
+    return (
+      <div className="flex flex-col h-screen bg-background">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-secondary">
+          <Button onClick={proxyGoBack} variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" disabled={proxyHistoryIndex <= 0}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Button onClick={proxyGoForward} variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" disabled={proxyHistoryIndex >= proxyHistory.length - 1}>
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+          <Button onClick={proxyRefresh} variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
+            <RotateCw className="h-4 w-4" />
+          </Button>
+          <form onSubmit={(e) => { e.preventDefault(); navigateProxy(); }} className="flex-1">
+            <Input
+              value={proxyInput}
+              onChange={(e) => setProxyInput(e.target.value)}
+              className="h-8 bg-background border-border text-foreground text-sm font-mono focus:border-primary"
+              placeholder="Enter URL or search..."
+            />
+          </form>
+          <Button onClick={() => setProxyFullscreen(false)} variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
+            <Minimize2 className="h-4 w-4" />
+          </Button>
+          <Button onClick={onPanic} variant="destructive" size="sm" className="h-8 text-xs font-mono gap-1">
+            <AlertTriangle className="h-3 w-3" /> PANIC
+          </Button>
+        </div>
+        <iframe
+          ref={iframeRef}
+          src={proxyUrl}
+          className="flex-1 w-full border-none"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+          title="Proxy Browser"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background scanline">
       {/* Header */}
@@ -148,8 +251,96 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
       </header>
 
       <main className="flex-1 p-6 max-w-3xl mx-auto w-full space-y-8">
-        {/* Cloak URL */}
+        {/* Proxy Browser */}
         <section className="space-y-4">
+          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+            <Globe className="h-4 w-4" /> Proxy Browser
+          </h2>
+          <div className="flex gap-2">
+            <div className="flex items-center gap-1">
+              <Button onClick={proxyGoBack} variant="ghost" size="sm" className="h-10 w-8 p-0 text-muted-foreground hover:text-foreground" disabled={proxyHistoryIndex <= 0}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Button onClick={proxyGoForward} variant="ghost" size="sm" className="h-10 w-8 p-0 text-muted-foreground hover:text-foreground" disabled={proxyHistoryIndex >= proxyHistory.length - 1}>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button onClick={proxyRefresh} variant="ghost" size="sm" className="h-10 w-8 p-0 text-muted-foreground hover:text-foreground" disabled={!proxyActive}>
+                <RotateCw className="h-4 w-4" />
+              </Button>
+            </div>
+            <Input
+              value={proxyInput}
+              onChange={(e) => setProxyInput(e.target.value)}
+              placeholder="Enter URL or search term..."
+              className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm"
+              onKeyDown={(e) => e.key === "Enter" && navigateProxy()}
+            />
+            <Button
+              onClick={() => navigateProxy()}
+              className="bg-primary text-primary-foreground hover:bg-primary/80 glow-box font-mono"
+            >
+              GO
+            </Button>
+            {proxyActive && (
+              <Button
+                onClick={() => setProxyFullscreen(true)}
+                variant="outline"
+                size="icon"
+                className="border-border text-muted-foreground hover:text-primary hover:border-primary"
+                title="Fullscreen"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          {proxyActive && (
+            <div className="rounded-lg border border-border overflow-hidden bg-background">
+              <iframe
+                ref={iframeRef}
+                src={proxyUrl}
+                className="w-full border-none"
+                style={{ height: "60vh" }}
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+                title="Proxy Browser"
+              />
+            </div>
+          )}
+
+          {!proxyActive && (
+            <div className="rounded-lg border border-border bg-secondary/30 flex flex-col items-center justify-center py-16 text-center space-y-3">
+              <Globe className="h-10 w-10 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground font-mono">
+                Enter a URL or search term above to browse
+              </p>
+              <p className="text-xs text-muted-foreground/60">
+                Note: Some sites may block iframe embedding
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: "Google", url: "https://www.google.com/webhp?igu=1" },
+              { label: "Wikipedia", url: "https://en.wikipedia.org" },
+              { label: "Reddit", url: "https://old.reddit.com" },
+              { label: "DuckDuckGo", url: "https://duckduckgo.com" },
+            ].map((site) => (
+              <Button
+                key={site.label}
+                variant="outline"
+                size="sm"
+                onClick={() => { setProxyInput(site.url); navigateProxy(site.url); }}
+                className="text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"
+              >
+                {site.label}
+              </Button>
+            ))}
+          </div>
+        </section>
+
+        {/* Cloak URL */}
+        <section className="space-y-4 border-t border-border pt-6">
           <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
             <ExternalLink className="h-4 w-4" /> Open in Cloaked Tab
           </h2>
@@ -183,7 +374,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
         </section>
 
         {/* Tab Disguise */}
-        <section className="space-y-4">
+        <section className="space-y-4 border-t border-border pt-6">
           <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
             <Settings className="h-4 w-4" /> Tab Disguise
           </h2>
@@ -255,7 +446,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
                   className="flex items-center gap-2 group rounded px-2 py-1.5 hover:bg-secondary"
                 >
                   <button
-                    onClick={() => { setUrl(h.url); }}
+                    onClick={() => { setProxyInput(h.url); navigateProxy(h.url); }}
                     className="flex-1 text-left text-sm font-mono text-foreground truncate hover:text-primary transition-colors"
                   >
                     {h.url}
@@ -312,7 +503,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
                   ) : (
                     <>
                       <button
-                        onClick={() => setUrl(b.url)}
+                        onClick={() => { setProxyInput(b.url); navigateProxy(b.url); }}
                         className="text-sm font-mono text-foreground hover:text-primary transition-colors truncate max-w-[200px]"
                       >
                         {b.label}
