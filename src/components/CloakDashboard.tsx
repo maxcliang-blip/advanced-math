@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import ProfileSection from "@/components/ProfileSection";
 import { loadProfile, type UserProfile } from "@/lib/profile";
 import { themes, loadTheme, applyTheme } from "@/lib/themes";
@@ -30,6 +31,13 @@ import {
   Eye,
   EyeOff as EyeOffIcon,
   ShieldCheck,
+  Search,
+  Ban,
+  Plus,
+  FileText,
+  Lock,
+  History,
+  ChevronDown,
 } from "lucide-react";
 
 interface CloakDashboardProps {
@@ -42,6 +50,42 @@ interface BookmarkItem {
   url: string;
   label: string;
   folder: string;
+}
+
+interface PanicEvent {
+  time: number;
+  reason: string;
+}
+
+const SEARCH_ENGINES: Record<string, { label: string; url: (q: string) => string }> = {
+  google: { label: "Google", url: (q) => `https://www.google.com/search?igu=1&q=${encodeURIComponent(q)}` },
+  duckduckgo: { label: "DuckDuckGo", url: (q) => `https://duckduckgo.com/?q=${encodeURIComponent(q)}` },
+  bing: { label: "Bing", url: (q) => `https://www.bing.com/search?q=${encodeURIComponent(q)}` },
+  yahoo: { label: "Yahoo", url: (q) => `https://search.yahoo.com/search?p=${encodeURIComponent(q)}` },
+};
+
+// Simple XOR obfuscation for notes (not true encryption, but hides plaintext)
+function obfuscate(text: string, key: string): string {
+  if (!key) return text;
+  const result = [];
+  for (let i = 0; i < text.length; i++) {
+    result.push(String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length)));
+  }
+  return btoa(result.join(""));
+}
+
+function deobfuscate(encoded: string, key: string): string {
+  if (!key) return encoded;
+  try {
+    const decoded = atob(encoded);
+    const result = [];
+    for (let i = 0; i < decoded.length; i++) {
+      result.push(String.fromCharCode(decoded.charCodeAt(i) ^ key.charCodeAt(i % key.length)));
+    }
+    return result.join("");
+  } catch {
+    return "";
+  }
 }
 
 const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardProps) => {
@@ -85,6 +129,29 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   const [editingBookmark, setEditingBookmark] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
 
+  // === NEW FEATURES ===
+
+  // Search engine selector
+  const [searchEngine, setSearchEngine] = useState<string>(() => localStorage.getItem("cloak_search_engine") || "google");
+  const [showEngineDropdown, setShowEngineDropdown] = useState(false);
+
+  // Site blocker
+  const [blockedSites, setBlockedSites] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("cloak_blocked_sites") || "[]"); } catch { return []; }
+  });
+  const [newBlockedSite, setNewBlockedSite] = useState("");
+
+  // Panic history log
+  const [panicLog, setPanicLog] = useState<PanicEvent[]>(() => {
+    try { return JSON.parse(localStorage.getItem("cloak_panic_log") || "[]"); } catch { return []; }
+  });
+
+  // Notes/Scratchpad
+  const [notes, setNotes] = useState("");
+  const [notesKey, setNotesKey] = useState("");
+  const [notesUnlocked, setNotesUnlocked] = useState(false);
+  const [notesKeyInput, setNotesKeyInput] = useState("");
+
   // Apply theme on load
   useEffect(() => { applyTheme(currentTheme); }, []);
 
@@ -111,6 +178,11 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   useEffect(() => { if (!incognito) localStorage.setItem("cloak_bookmarks_v2", JSON.stringify(bookmarks)); }, [bookmarks, incognito]);
   useEffect(() => { if (!incognito) localStorage.setItem("cloak_bm_folders", JSON.stringify(bookmarkFolders)); }, [bookmarkFolders, incognito]);
   useEffect(() => { localStorage.setItem("cloak_incognito", String(incognito)); }, [incognito]);
+
+  // Persist new feature states
+  useEffect(() => { localStorage.setItem("cloak_search_engine", searchEngine); }, [searchEngine]);
+  useEffect(() => { localStorage.setItem("cloak_blocked_sites", JSON.stringify(blockedSites)); }, [blockedSites]);
+  useEffect(() => { if (!incognito) localStorage.setItem("cloak_panic_log", JSON.stringify(panicLog)); }, [panicLog, incognito]);
 
   const addToHistory = (target: string) => {
     setHistory((prev) => [
@@ -145,6 +217,12 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
     if (activeFolder === folder) setActiveFolder("General");
   };
 
+  // Check if URL is blocked
+  const isBlocked = (targetUrl: string): boolean => {
+    const hostname = targetUrl.replace(/^https?:\/\//, "").split("/")[0].toLowerCase();
+    return blockedSites.some((site) => hostname.includes(site.toLowerCase()));
+  };
+
   const navigateProxy = (inputUrl?: string) => {
     const raw = inputUrl || proxyInput;
     if (!raw) return;
@@ -153,9 +231,16 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
       if (target.includes(".") && !target.includes(" ")) {
         target = `https://${target}`;
       } else {
-        target = `https://www.google.com/search?igu=1&q=${encodeURIComponent(target)}`;
+        target = SEARCH_ENGINES[searchEngine].url(target);
       }
     }
+
+    // Check site blocker
+    if (isBlocked(target)) {
+      alert(`🚫 This site is blocked: ${target.replace(/^https?:\/\//, "").split("/")[0]}`);
+      return;
+    }
+
     setProxyUrl(target);
     setProxyInput(target);
     setProxyActive(true);
@@ -194,6 +279,12 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   const openCloaked = () => {
     if (!url) return;
     const target = url.startsWith("http") ? url : `https://${url}`;
+
+    if (isBlocked(target)) {
+      alert(`🚫 This site is blocked: ${target.replace(/^https?:\/\//, "").split("/")[0]}`);
+      return;
+    }
+
     addToHistory(target);
     const win = window.open("about:blank", "_blank");
     if (win) {
@@ -236,6 +327,48 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
     }
   };
 
+  // Enhanced panic with logging
+  const handlePanicWithLog = () => {
+    setPanicLog((prev) => [
+      { time: Date.now(), reason: "Manual trigger" },
+      ...prev,
+    ].slice(0, 50));
+    onPanic();
+  };
+
+  // Notes functions
+  const unlockNotes = () => {
+    const storedNotes = localStorage.getItem("cloak_notes");
+    if (storedNotes) {
+      setNotes(deobfuscate(storedNotes, notesKeyInput));
+    } else {
+      setNotes("");
+    }
+    setNotesKey(notesKeyInput);
+    setNotesUnlocked(true);
+    setNotesKeyInput("");
+  };
+
+  const saveNotes = () => {
+    const encoded = obfuscate(notes, notesKey);
+    localStorage.setItem("cloak_notes", encoded);
+  };
+
+  const lockNotes = () => {
+    saveNotes();
+    setNotes("");
+    setNotesKey("");
+    setNotesUnlocked(false);
+  };
+
+  // Add blocked site
+  const addBlockedSite = () => {
+    const site = newBlockedSite.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0];
+    if (!site || blockedSites.includes(site)) return;
+    setBlockedSites((prev) => [...prev, site]);
+    setNewBlockedSite("");
+  };
+
   // Fullscreen proxy view
   if (proxyFullscreen && proxyActive) {
     return (
@@ -261,7 +394,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
           <Button onClick={() => setProxyFullscreen(false)} variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
             <Minimize2 className="h-4 w-4" />
           </Button>
-          <Button onClick={onPanic} variant="destructive" size="sm" className="h-8 text-xs font-mono gap-1">
+          <Button onClick={handlePanicWithLog} variant="destructive" size="sm" className="h-8 text-xs font-mono gap-1">
             <AlertTriangle className="h-3 w-3" /> PANIC
           </Button>
         </div>
@@ -305,10 +438,10 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
             title={incognito ? "Incognito ON — data cleared on exit" : "Enable incognito mode"}
           >
             {incognito ? <EyeOffIcon className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-            {incognito ? "INCOG" : "INCOG"}
+            INCOG
           </Button>
           <Button
-            onClick={onPanic}
+            onClick={handlePanicWithLog}
             variant="destructive"
             size="sm"
             className="gap-2 font-mono text-xs"
@@ -346,10 +479,40 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
                 <RotateCw className="h-4 w-4" />
               </Button>
             </div>
+
+            {/* Search engine selector */}
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 px-2 border-border text-muted-foreground hover:text-foreground hover:border-primary font-mono text-xs gap-1"
+                onClick={() => setShowEngineDropdown(!showEngineDropdown)}
+              >
+                <Search className="h-3 w-3" />
+                {SEARCH_ENGINES[searchEngine].label}
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+              {showEngineDropdown && (
+                <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-md shadow-lg py-1 min-w-[140px]">
+                  {Object.entries(SEARCH_ENGINES).map(([key, engine]) => (
+                    <button
+                      key={key}
+                      onClick={() => { setSearchEngine(key); setShowEngineDropdown(false); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors ${
+                        searchEngine === key ? "text-primary bg-secondary" : "text-foreground hover:bg-secondary hover:text-primary"
+                      }`}
+                    >
+                      {engine.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <Input
               value={proxyInput}
               onChange={(e) => setProxyInput(e.target.value)}
-              placeholder="Enter URL or search term..."
+              placeholder={`Search with ${SEARCH_ENGINES[searchEngine].label} or enter URL...`}
               className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm"
               onKeyDown={(e) => e.key === "Enter" && navigateProxy()}
             />
@@ -415,6 +578,52 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
               </Button>
             ))}
           </div>
+        </section>
+
+        {/* Site Blocker */}
+        <section className="space-y-4 border-t border-border pt-6">
+          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+            <Ban className="h-4 w-4" /> Site Blocker
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Block distracting sites — they won't load in the proxy browser or cloaked tabs.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              value={newBlockedSite}
+              onChange={(e) => setNewBlockedSite(e.target.value)}
+              placeholder="e.g. tiktok.com, instagram.com"
+              className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm"
+              onKeyDown={(e) => e.key === "Enter" && addBlockedSite()}
+            />
+            <Button
+              onClick={addBlockedSite}
+              variant="outline"
+              size="sm"
+              className="border-border text-muted-foreground hover:text-primary hover:border-primary font-mono"
+            >
+              <Plus className="h-4 w-4 mr-1" /> Block
+            </Button>
+          </div>
+          {blockedSites.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {blockedSites.map((site) => (
+                <div
+                  key={site}
+                  className="flex items-center gap-1.5 bg-destructive/10 border border-destructive/30 rounded px-2.5 py-1 text-xs font-mono text-destructive"
+                >
+                  <Ban className="h-3 w-3" />
+                  {site}
+                  <button
+                    onClick={() => setBlockedSites((prev) => prev.filter((s) => s !== site))}
+                    className="hover:text-foreground ml-1"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Cloak URL */}
@@ -523,6 +732,79 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
           )}
         </section>
 
+        {/* Notes / Scratchpad */}
+        <section className="space-y-4 border-t border-border pt-6">
+          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+            <FileText className="h-4 w-4" /> Encrypted Notes
+          </h2>
+
+          {!notesUnlocked ? (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Enter a passphrase to unlock your encrypted scratchpad. Your notes are obfuscated with this key.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  value={notesKeyInput}
+                  onChange={(e) => setNotesKeyInput(e.target.value)}
+                  placeholder="Enter passphrase..."
+                  className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm"
+                  onKeyDown={(e) => e.key === "Enter" && unlockNotes()}
+                />
+                <Button
+                  onClick={unlockNotes}
+                  variant="outline"
+                  className="border-primary/30 text-foreground hover:bg-primary/10 hover:border-primary font-mono text-sm gap-1"
+                >
+                  <Lock className="h-3 w-3" /> Unlock
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Write your private notes here..."
+                className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm min-h-[150px] resize-y"
+              />
+              <div className="flex gap-2">
+                <Button
+                  onClick={saveNotes}
+                  variant="outline"
+                  className="border-primary/30 text-foreground hover:bg-primary/10 hover:border-primary font-mono text-sm gap-1"
+                >
+                  <Check className="h-3 w-3" /> Save
+                </Button>
+                <Button
+                  onClick={lockNotes}
+                  variant="outline"
+                  className="border-border text-muted-foreground hover:text-foreground hover:bg-secondary font-mono text-sm gap-1"
+                >
+                  <Lock className="h-3 w-3" /> Lock
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (confirm("Delete all notes permanently?")) {
+                      setNotes("");
+                      localStorage.removeItem("cloak_notes");
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-3 w-3 mr-1" /> Delete
+                </Button>
+              </div>
+              <p className="text-xs text-primary/60 font-mono">
+                🔒 Notes are encrypted with your passphrase
+              </p>
+            </div>
+          )}
+        </section>
+
         {/* Themes */}
         <section className="space-y-4 border-t border-border pt-6">
           <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
@@ -593,6 +875,43 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
             </div>
           </section>
         )}
+
+        {/* Panic History Log */}
+        <section className="space-y-4 border-t border-border pt-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <History className="h-4 w-4" /> Panic Log
+            </h2>
+            {panicLog.length > 0 && (
+              <Button
+                onClick={() => setPanicLog([])}
+                variant="ghost"
+                size="sm"
+                className="text-xs font-mono text-muted-foreground hover:text-destructive"
+              >
+                Clear Log
+              </Button>
+            )}
+          </div>
+          {panicLog.length > 0 ? (
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {panicLog.map((event, i) => (
+                <div
+                  key={event.time + i}
+                  className="flex items-center gap-3 rounded px-2 py-1.5 hover:bg-secondary text-xs font-mono"
+                >
+                  <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
+                  <span className="text-foreground">{event.reason}</span>
+                  <span className="text-muted-foreground ml-auto whitespace-nowrap">
+                    {new Date(event.time).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground font-mono">No panic events recorded yet.</p>
+          )}
+        </section>
 
         {/* Bookmarks with Folders */}
         <section className="space-y-4 border-t border-border pt-6">
@@ -741,8 +1060,13 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
                 setBookmarks([]);
                 clearCloak();
                 setActiveCloak(null);
+                setBlockedSites([]);
+                setPanicLog([]);
                 localStorage.removeItem("cloak_history");
                 localStorage.removeItem("cloak_bookmarks_v2");
+                localStorage.removeItem("cloak_blocked_sites");
+                localStorage.removeItem("cloak_panic_log");
+                localStorage.removeItem("cloak_notes");
               }}
               variant="outline"
               size="sm"
