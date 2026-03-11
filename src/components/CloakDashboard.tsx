@@ -1136,9 +1136,41 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
         </section>
       </main>
 
+      {/* Keyboard Shortcuts Modal */}
+      {showShortcuts && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={() => setShowShortcuts(false)}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-mono text-primary uppercase tracking-widest">Keyboard Shortcuts</h3>
+              <Button onClick={() => setShowShortcuts(false)} variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-2 text-sm font-mono">
+              {[
+                ["Alt + I", "Toggle incognito mode"],
+                ["Alt + N", "Toggle notes (lock/scroll)"],
+                ["Alt + T", "Cycle theme"],
+                ["Alt + P", "Panic mode"],
+                ["Alt + L", "Lock dashboard"],
+                ["Alt + F", "Toggle fullscreen proxy"],
+                ["Alt + /", "Show/hide this help"],
+                [profile.panicKey === " " ? "Space" : profile.panicKey, "Panic key (global)"],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                  <kbd className="px-2 py-0.5 bg-secondary rounded text-primary text-xs">{key}</kbd>
+                  <span className="text-muted-foreground text-xs">{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <footer className="border-t border-border px-6 py-3 text-center">
         <p className="text-xs text-muted-foreground font-mono">
           Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-foreground">{profile.panicKey === " " ? "Space" : profile.panicKey}</kbd> for panic mode
+          · <button onClick={() => setShowShortcuts(true)} className="underline hover:text-foreground transition-colors">Alt+/ for shortcuts</button>
           {incognito && " · Incognito active — data will be cleared on exit"}
         </p>
       </footer>
