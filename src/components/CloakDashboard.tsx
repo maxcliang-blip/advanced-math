@@ -152,6 +152,9 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   const [notesUnlocked, setNotesUnlocked] = useState(false);
   const [notesKeyInput, setNotesKeyInput] = useState("");
 
+  // Keyboard shortcuts
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
   // Apply theme on load
   useEffect(() => { applyTheme(currentTheme); }, []);
 
