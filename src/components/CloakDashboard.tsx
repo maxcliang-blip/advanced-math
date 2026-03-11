@@ -1267,24 +1267,91 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
 
       {/* Calculator Modal */}
       {showCalc && (
-        <div className="fixed bottom-20 right-6 z-50 bg-card border border-border rounded-lg shadow-lg w-64" style={{ boxShadow: "var(--glow)" }}>
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border cursor-move">
-            <span className="text-xs font-mono text-primary uppercase tracking-widest">Calculator</span>
+        <div className="fixed bottom-20 right-6 z-50 bg-card border border-border rounded-lg shadow-lg" style={{ boxShadow: "var(--glow)", width: calcMode === "sci" ? "320px" : "256px" }}>
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-primary uppercase tracking-widest">Calc</span>
+              <button onClick={() => setCalcMode(calcMode === "basic" ? "sci" : "basic")} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors">
+                {calcMode === "basic" ? "SCI" : "BASIC"}
+              </button>
+              {calcMode === "sci" && (
+                <button onClick={() => setCalcDeg(!calcDeg)} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors">
+                  {calcDeg ? "DEG" : "RAD"}
+                </button>
+              )}
+              <button onClick={() => setShowCalcHistory(!showCalcHistory)} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors">
+                <History className="h-3 w-3" />
+              </button>
+            </div>
             <Button onClick={() => setShowCalc(false)} variant="ghost" size="sm" className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground">
               <X className="h-3 w-3" />
             </Button>
           </div>
-          <div className="p-3">
-            <div className="bg-secondary rounded px-3 py-2 mb-3 text-right">
-              {calcOp && <span className="text-xs text-muted-foreground block">{calcPrev} {calcOp}</span>}
-              <span className="text-lg font-mono text-foreground">{calcDisplay}</span>
+
+          {/* History dropdown */}
+          {showCalcHistory && calcHistory.length > 0 && (
+            <div className="max-h-24 overflow-y-auto border-b border-border px-3 py-1.5">
+              {calcHistory.map((h, i) => (
+                <div key={i} className="text-[10px] font-mono text-muted-foreground py-0.5 truncate">{h}</div>
+              ))}
             </div>
+          )}
+
+          <div className="p-3">
+            {/* Display */}
+            <div className="bg-secondary rounded px-3 py-2 mb-3 text-right">
+              {calcOp && <span className="text-[10px] text-muted-foreground block">{calcPrev} {calcOp}</span>}
+              <span className="text-lg font-mono text-foreground truncate block">{calcDisplay}</span>
+            </div>
+
+            {/* Memory row */}
+            <div className="flex gap-1 mb-2">
+              {[
+                { label: "MC", action: () => setCalcMemory(0) },
+                { label: "MR", action: () => { setCalcDisplay(String(calcMemory)); setCalcReset(true); } },
+                { label: "M+", action: () => setCalcMemory((m) => m + parseFloat(calcDisplay)) },
+                { label: "M-", action: () => setCalcMemory((m) => m - parseFloat(calcDisplay)) },
+              ].map(({ label, action }) => (
+                <button key={label} onClick={action} className={`flex-1 text-[10px] font-mono py-1 rounded hover:bg-secondary/80 transition-colors ${calcMemory !== 0 && label === "MR" ? "text-primary" : "text-muted-foreground"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Scientific functions */}
+            {calcMode === "sci" && (
+              <div className="grid grid-cols-5 gap-1 mb-2">
+                {["sin", "cos", "tan", "π", "e", "√", "x²", "x³", "xʸ", "n!", "log", "ln", "1/x", "|x|", "⌫"].map((fn) => (
+                  <Button
+                    key={fn}
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-[11px] font-mono text-muted-foreground hover:text-primary px-1"
+                    onClick={() => {
+                      if (fn === "xʸ") calcOperator("xʸ");
+                      else if (fn === "⌫") calcBackspace();
+                      else calcSci(fn);
+                    }}
+                  >
+                    {fn}
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            {/* Standard buttons */}
             <div className="grid grid-cols-4 gap-1.5">
-              {["C", "±", "%", "÷", "7", "8", "9", "×", "4", "5", "6", "-", "1", "2", "3", "+", "0", ".", "="].map((btn) => {
+              {[
+                "C", calcMode === "basic" ? "±" : "⌫", "%", "÷",
+                "7", "8", "9", "×",
+                "4", "5", "6", "-",
+                "1", "2", "3", "+",
+                "0", ".", "="
+              ].map((btn) => {
                 const isOp = ["÷", "×", "-", "+"].includes(btn);
                 const isEquals = btn === "=";
                 const isZero = btn === "0";
-                const isUtil = ["C", "±", "%"].includes(btn);
+                const isUtil = ["C", "±", "%", "⌫"].includes(btn);
                 return (
                   <Button
                     key={btn}
@@ -1294,6 +1361,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
                     onClick={() => {
                       if (btn === "C") calcClear();
                       else if (btn === "±") setCalcDisplay(String(-parseFloat(calcDisplay)));
+                      else if (btn === "⌫") calcBackspace();
                       else if (btn === "%") setCalcDisplay(String(parseFloat(calcDisplay) / 100));
                       else if (btn === ".") calcDecimal();
                       else if (btn === "=") calcEquals();
