@@ -263,6 +263,11 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
         e.preventDefault();
         setShowShortcuts((prev) => !prev);
       }
+      // Alt+C — toggle calculator
+      if (e.altKey && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        setShowCalc((prev) => !prev);
+      }
     };
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
