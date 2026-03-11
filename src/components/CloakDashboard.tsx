@@ -155,6 +155,62 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   // Keyboard shortcuts
   const [showShortcuts, setShowShortcuts] = useState(false);
 
+  // Calculator
+  const [showCalc, setShowCalc] = useState(false);
+  const [calcDisplay, setCalcDisplay] = useState("0");
+  const [calcPrev, setCalcPrev] = useState<number | null>(null);
+  const [calcOp, setCalcOp] = useState<string | null>(null);
+  const [calcReset, setCalcReset] = useState(false);
+
+  const calcInput = (val: string) => {
+    if (calcReset || calcDisplay === "0") {
+      setCalcDisplay(val);
+      setCalcReset(false);
+    } else {
+      setCalcDisplay(calcDisplay + val);
+    }
+  };
+  const calcDecimal = () => {
+    if (calcReset) { setCalcDisplay("0."); setCalcReset(false); return; }
+    if (!calcDisplay.includes(".")) setCalcDisplay(calcDisplay + ".");
+  };
+  const calcOperator = (op: string) => {
+    const current = parseFloat(calcDisplay);
+    if (calcPrev !== null && calcOp && !calcReset) {
+      const result = calcCompute(calcPrev, current, calcOp);
+      setCalcDisplay(String(result));
+      setCalcPrev(result);
+    } else {
+      setCalcPrev(current);
+    }
+    setCalcOp(op);
+    setCalcReset(true);
+  };
+  const calcCompute = (a: number, b: number, op: string): number => {
+    switch (op) {
+      case "+": return a + b;
+      case "-": return a - b;
+      case "×": return a * b;
+      case "÷": return b !== 0 ? a / b : 0;
+      default: return b;
+    }
+  };
+  const calcEquals = () => {
+    if (calcPrev === null || !calcOp) return;
+    const current = parseFloat(calcDisplay);
+    const result = calcCompute(calcPrev, current, calcOp);
+    setCalcDisplay(String(parseFloat(result.toFixed(10))));
+    setCalcPrev(null);
+    setCalcOp(null);
+    setCalcReset(true);
+  };
+  const calcClear = () => {
+    setCalcDisplay("0");
+    setCalcPrev(null);
+    setCalcOp(null);
+    setCalcReset(false);
+  };
+
   // Apply theme on load
   useEffect(() => { applyTheme(currentTheme); }, []);
 
@@ -206,6 +262,11 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
       if (e.altKey && (e.key === "/" || e.key === "?")) {
         e.preventDefault();
         setShowShortcuts((prev) => !prev);
+      }
+      // Alt+C — toggle calculator
+      if (e.altKey && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        setShowCalc((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handleShortcut);
@@ -1155,6 +1216,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
                 ["Alt + L", "Lock dashboard"],
                 ["Alt + F", "Toggle fullscreen proxy"],
                 ["Alt + /", "Show/hide this help"],
+                ["Alt + C", "Toggle calculator"],
                 [profile.panicKey === " " ? "Space" : profile.panicKey, "Panic key (global)"],
               ].map(([key, desc]) => (
                 <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
@@ -1162,6 +1224,51 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
                   <span className="text-muted-foreground text-xs">{desc}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Calculator Modal */}
+      {showCalc && (
+        <div className="fixed bottom-20 right-6 z-50 bg-card border border-border rounded-lg shadow-lg w-64" style={{ boxShadow: "var(--glow)" }}>
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border cursor-move">
+            <span className="text-xs font-mono text-primary uppercase tracking-widest">Calculator</span>
+            <Button onClick={() => setShowCalc(false)} variant="ghost" size="sm" className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground">
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          <div className="p-3">
+            <div className="bg-secondary rounded px-3 py-2 mb-3 text-right">
+              {calcOp && <span className="text-xs text-muted-foreground block">{calcPrev} {calcOp}</span>}
+              <span className="text-lg font-mono text-foreground">{calcDisplay}</span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {["C", "±", "%", "÷", "7", "8", "9", "×", "4", "5", "6", "-", "1", "2", "3", "+", "0", ".", "="].map((btn) => {
+                const isOp = ["÷", "×", "-", "+"].includes(btn);
+                const isEquals = btn === "=";
+                const isZero = btn === "0";
+                const isUtil = ["C", "±", "%"].includes(btn);
+                return (
+                  <Button
+                    key={btn}
+                    variant={isEquals ? "default" : isOp ? "outline" : "ghost"}
+                    size="sm"
+                    className={`h-9 font-mono text-sm ${isZero ? "col-span-2" : ""} ${isOp ? "text-primary border-primary/30" : ""} ${isUtil ? "text-muted-foreground" : ""} ${isEquals ? "bg-primary text-primary-foreground" : ""}`}
+                    onClick={() => {
+                      if (btn === "C") calcClear();
+                      else if (btn === "±") setCalcDisplay(String(-parseFloat(calcDisplay)));
+                      else if (btn === "%") setCalcDisplay(String(parseFloat(calcDisplay) / 100));
+                      else if (btn === ".") calcDecimal();
+                      else if (btn === "=") calcEquals();
+                      else if (isOp) calcOperator(btn);
+                      else calcInput(btn);
+                    }}
+                  >
+                    {btn}
+                  </Button>
+                );
+              })}
             </div>
           </div>
         </div>
