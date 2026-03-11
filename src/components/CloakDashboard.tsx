@@ -161,6 +161,11 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   const [calcPrev, setCalcPrev] = useState<number | null>(null);
   const [calcOp, setCalcOp] = useState<string | null>(null);
   const [calcReset, setCalcReset] = useState(false);
+  const [calcMode, setCalcMode] = useState<"basic" | "sci">("basic");
+  const [calcMemory, setCalcMemory] = useState(0);
+  const [calcHistory, setCalcHistory] = useState<string[]>([]);
+  const [showCalcHistory, setShowCalcHistory] = useState(false);
+  const [calcDeg, setCalcDeg] = useState(true); // true=degrees, false=radians
 
   const calcInput = (val: string) => {
     if (calcReset || calcDisplay === "0") {
@@ -192,6 +197,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
       case "-": return a - b;
       case "×": return a * b;
       case "÷": return b !== 0 ? a / b : 0;
+      case "xʸ": return Math.pow(a, b);
       default: return b;
     }
   };
@@ -199,7 +205,10 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
     if (calcPrev === null || !calcOp) return;
     const current = parseFloat(calcDisplay);
     const result = calcCompute(calcPrev, current, calcOp);
-    setCalcDisplay(String(parseFloat(result.toFixed(10))));
+    const rounded = parseFloat(result.toFixed(10));
+    const expr = `${calcPrev} ${calcOp} ${current} = ${rounded}`;
+    setCalcHistory((prev) => [expr, ...prev].slice(0, 20));
+    setCalcDisplay(String(rounded));
     setCalcPrev(null);
     setCalcOp(null);
     setCalcReset(true);
@@ -209,6 +218,33 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
     setCalcPrev(null);
     setCalcOp(null);
     setCalcReset(false);
+  };
+  const calcBackspace = () => {
+    if (calcReset) return;
+    setCalcDisplay((prev) => prev.length > 1 ? prev.slice(0, -1) : "0");
+  };
+  const toAngle = (v: number) => calcDeg ? (v * Math.PI) / 180 : v;
+  const calcSci = (fn: string) => {
+    const v = parseFloat(calcDisplay);
+    let result: number;
+    switch (fn) {
+      case "sin": result = Math.sin(toAngle(v)); break;
+      case "cos": result = Math.cos(toAngle(v)); break;
+      case "tan": result = Math.tan(toAngle(v)); break;
+      case "√": result = Math.sqrt(v); break;
+      case "x²": result = v * v; break;
+      case "x³": result = v * v * v; break;
+      case "log": result = Math.log10(v); break;
+      case "ln": result = Math.log(v); break;
+      case "1/x": result = v !== 0 ? 1 / v : 0; break;
+      case "|x|": result = Math.abs(v); break;
+      case "e": result = Math.E; break;
+      case "π": result = Math.PI; break;
+      case "n!": result = v < 0 || v > 170 || v % 1 !== 0 ? NaN : Array.from({ length: v }, (_, i) => i + 1).reduce((a, b) => a * b, 1); break;
+      default: result = v;
+    }
+    setCalcDisplay(String(parseFloat(result.toFixed(10))));
+    setCalcReset(true);
   };
 
   // Apply theme on load
