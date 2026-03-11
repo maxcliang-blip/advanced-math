@@ -155,6 +155,62 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   // Keyboard shortcuts
   const [showShortcuts, setShowShortcuts] = useState(false);
 
+  // Calculator
+  const [showCalc, setShowCalc] = useState(false);
+  const [calcDisplay, setCalcDisplay] = useState("0");
+  const [calcPrev, setCalcPrev] = useState<number | null>(null);
+  const [calcOp, setCalcOp] = useState<string | null>(null);
+  const [calcReset, setCalcReset] = useState(false);
+
+  const calcInput = (val: string) => {
+    if (calcReset || calcDisplay === "0") {
+      setCalcDisplay(val);
+      setCalcReset(false);
+    } else {
+      setCalcDisplay(calcDisplay + val);
+    }
+  };
+  const calcDecimal = () => {
+    if (calcReset) { setCalcDisplay("0."); setCalcReset(false); return; }
+    if (!calcDisplay.includes(".")) setCalcDisplay(calcDisplay + ".");
+  };
+  const calcOperator = (op: string) => {
+    const current = parseFloat(calcDisplay);
+    if (calcPrev !== null && calcOp && !calcReset) {
+      const result = calcCompute(calcPrev, current, calcOp);
+      setCalcDisplay(String(result));
+      setCalcPrev(result);
+    } else {
+      setCalcPrev(current);
+    }
+    setCalcOp(op);
+    setCalcReset(true);
+  };
+  const calcCompute = (a: number, b: number, op: string): number => {
+    switch (op) {
+      case "+": return a + b;
+      case "-": return a - b;
+      case "×": return a * b;
+      case "÷": return b !== 0 ? a / b : 0;
+      default: return b;
+    }
+  };
+  const calcEquals = () => {
+    if (calcPrev === null || !calcOp) return;
+    const current = parseFloat(calcDisplay);
+    const result = calcCompute(calcPrev, current, calcOp);
+    setCalcDisplay(String(parseFloat(result.toFixed(10))));
+    setCalcPrev(null);
+    setCalcOp(null);
+    setCalcReset(true);
+  };
+  const calcClear = () => {
+    setCalcDisplay("0");
+    setCalcPrev(null);
+    setCalcOp(null);
+    setCalcReset(false);
+  };
+
   // Apply theme on load
   useEffect(() => { applyTheme(currentTheme); }, []);
 
