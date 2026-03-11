@@ -791,7 +791,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
         </section>
 
         {/* Notes / Scratchpad */}
-        <section className="space-y-4 border-t border-border pt-6">
+        <section id="notes-section" className="space-y-4 border-t border-border pt-6">
           <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
             <FileText className="h-4 w-4" /> Encrypted Notes
           </h2>
