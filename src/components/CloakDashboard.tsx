@@ -152,8 +152,66 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   const [notesUnlocked, setNotesUnlocked] = useState(false);
   const [notesKeyInput, setNotesKeyInput] = useState("");
 
+  // Keyboard shortcuts
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
   // Apply theme on load
   useEffect(() => { applyTheme(currentTheme); }, []);
+
+  // Keyboard shortcuts handler
+  useEffect(() => {
+    const handleShortcut = (e: KeyboardEvent) => {
+      // Ignore if typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      // Alt+I — toggle incognito
+      if (e.altKey && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        setIncognito((prev) => !prev);
+      }
+      // Alt+N — toggle notes
+      if (e.altKey && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        if (notesUnlocked) {
+          lockNotes();
+        } else {
+          // Focus the notes section by scrolling to it
+          document.getElementById("notes-section")?.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+      // Alt+T — cycle theme
+      if (e.altKey && e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        const idx = themes.findIndex((t) => t.name === currentTheme);
+        const next = themes[(idx + 1) % themes.length];
+        handleThemeChange(next.name);
+      }
+      // Alt+P — panic
+      if (e.altKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        handlePanicWithLog();
+      }
+      // Alt+L — lock
+      if (e.altKey && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        onLogout();
+      }
+      // Alt+F — toggle fullscreen proxy
+      if (e.altKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        if (proxyActive) setProxyFullscreen((prev) => !prev);
+      }
+      // Alt+/ or Alt+? — show shortcuts help
+      if (e.altKey && (e.key === "/" || e.key === "?")) {
+        e.preventDefault();
+        setShowShortcuts((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [currentTheme, notesUnlocked, proxyActive]);
+
 
   // Apply tab cloak on load
   useEffect(() => {
@@ -733,7 +791,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
         </section>
 
         {/* Notes / Scratchpad */}
-        <section className="space-y-4 border-t border-border pt-6">
+        <section id="notes-section" className="space-y-4 border-t border-border pt-6">
           <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
             <FileText className="h-4 w-4" /> Encrypted Notes
           </h2>
@@ -1078,9 +1136,41 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
         </section>
       </main>
 
+      {/* Keyboard Shortcuts Modal */}
+      {showShortcuts && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={() => setShowShortcuts(false)}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-mono text-primary uppercase tracking-widest">Keyboard Shortcuts</h3>
+              <Button onClick={() => setShowShortcuts(false)} variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-2 text-sm font-mono">
+              {[
+                ["Alt + I", "Toggle incognito mode"],
+                ["Alt + N", "Toggle notes (lock/scroll)"],
+                ["Alt + T", "Cycle theme"],
+                ["Alt + P", "Panic mode"],
+                ["Alt + L", "Lock dashboard"],
+                ["Alt + F", "Toggle fullscreen proxy"],
+                ["Alt + /", "Show/hide this help"],
+                [profile.panicKey === " " ? "Space" : profile.panicKey, "Panic key (global)"],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                  <kbd className="px-2 py-0.5 bg-secondary rounded text-primary text-xs">{key}</kbd>
+                  <span className="text-muted-foreground text-xs">{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <footer className="border-t border-border px-6 py-3 text-center">
         <p className="text-xs text-muted-foreground font-mono">
           Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-foreground">{profile.panicKey === " " ? "Space" : profile.panicKey}</kbd> for panic mode
+          · <button onClick={() => setShowShortcuts(true)} className="underline hover:text-foreground transition-colors">Alt+/ for shortcuts</button>
           {incognito && " · Incognito active — data will be cleared on exit"}
         </p>
       </footer>
