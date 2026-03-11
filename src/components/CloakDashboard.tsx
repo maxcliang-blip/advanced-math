@@ -158,6 +158,61 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   // Apply theme on load
   useEffect(() => { applyTheme(currentTheme); }, []);
 
+  // Keyboard shortcuts handler
+  useEffect(() => {
+    const handleShortcut = (e: KeyboardEvent) => {
+      // Ignore if typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      // Alt+I — toggle incognito
+      if (e.altKey && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        setIncognito((prev) => !prev);
+      }
+      // Alt+N — toggle notes
+      if (e.altKey && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        if (notesUnlocked) {
+          lockNotes();
+        } else {
+          // Focus the notes section by scrolling to it
+          document.getElementById("notes-section")?.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+      // Alt+T — cycle theme
+      if (e.altKey && e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        const idx = themes.findIndex((t) => t.name === currentTheme);
+        const next = themes[(idx + 1) % themes.length];
+        handleThemeChange(next.name);
+      }
+      // Alt+P — panic
+      if (e.altKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        handlePanicWithLog();
+      }
+      // Alt+L — lock
+      if (e.altKey && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        onLogout();
+      }
+      // Alt+F — toggle fullscreen proxy
+      if (e.altKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        if (proxyActive) setProxyFullscreen((prev) => !prev);
+      }
+      // Alt+/ or Alt+? — show shortcuts help
+      if (e.altKey && (e.key === "/" || e.key === "?")) {
+        e.preventDefault();
+        setShowShortcuts((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [currentTheme, notesUnlocked, proxyActive]);
+
+
   // Apply tab cloak on load
   useEffect(() => {
     if (activeCloak) applyCloakPreset(activeCloak);
