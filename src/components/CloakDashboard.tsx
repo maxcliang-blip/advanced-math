@@ -1229,7 +1229,51 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
         </div>
       )}
 
-      <footer className="border-t border-border px-6 py-3 text-center">
+      {/* Calculator Modal */}
+      {showCalc && (
+        <div className="fixed bottom-20 right-6 z-50 bg-card border border-border rounded-lg shadow-lg w-64" style={{ boxShadow: "var(--glow)" }}>
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border cursor-move">
+            <span className="text-xs font-mono text-primary uppercase tracking-widest">Calculator</span>
+            <Button onClick={() => setShowCalc(false)} variant="ghost" size="sm" className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground">
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          <div className="p-3">
+            <div className="bg-secondary rounded px-3 py-2 mb-3 text-right">
+              {calcOp && <span className="text-xs text-muted-foreground block">{calcPrev} {calcOp}</span>}
+              <span className="text-lg font-mono text-foreground">{calcDisplay}</span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {["C", "±", "%", "÷", "7", "8", "9", "×", "4", "5", "6", "-", "1", "2", "3", "+", "0", ".", "="].map((btn) => {
+                const isOp = ["÷", "×", "-", "+"].includes(btn);
+                const isEquals = btn === "=";
+                const isZero = btn === "0";
+                const isUtil = ["C", "±", "%"].includes(btn);
+                return (
+                  <Button
+                    key={btn}
+                    variant={isEquals ? "default" : isOp ? "outline" : "ghost"}
+                    size="sm"
+                    className={`h-9 font-mono text-sm ${isZero ? "col-span-2" : ""} ${isOp ? "text-primary border-primary/30" : ""} ${isUtil ? "text-muted-foreground" : ""} ${isEquals ? "bg-primary text-primary-foreground" : ""}`}
+                    onClick={() => {
+                      if (btn === "C") calcClear();
+                      else if (btn === "±") setCalcDisplay(String(-parseFloat(calcDisplay)));
+                      else if (btn === "%") setCalcDisplay(String(parseFloat(calcDisplay) / 100));
+                      else if (btn === ".") calcDecimal();
+                      else if (btn === "=") calcEquals();
+                      else if (isOp) calcOperator(btn);
+                      else calcInput(btn);
+                    }}
+                  >
+                    {btn}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
         <p className="text-xs text-muted-foreground font-mono">
           Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-foreground">{profile.panicKey === " " ? "Space" : profile.panicKey}</kbd> for panic mode
           · <button onClick={() => setShowShortcuts(true)} className="underline hover:text-foreground transition-colors">Alt+/ for shortcuts</button>
