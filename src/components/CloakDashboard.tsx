@@ -6,6 +6,10 @@ import ProfileSection from "@/components/ProfileSection";
 import { loadProfile, type UserProfile } from "@/lib/profile";
 import { themes, loadTheme, applyTheme } from "@/lib/themes";
 import { tabPresets, applyCloakPreset, loadActiveCloak, clearCloak, type TabPreset } from "@/lib/tabCloak";
+import StopwatchTimer from "@/components/StopwatchTimer";
+import UnitConverter from "@/components/UnitConverter";
+import EquationSolver from "@/components/EquationSolver";
+import { useDraggable } from "@/hooks/use-draggable";
 import {
   EyeOff,
   ExternalLink,
@@ -167,6 +171,14 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   const [showCalcHistory, setShowCalcHistory] = useState(false);
   const [calcDeg, setCalcDeg] = useState(true); // true=degrees, false=radians
 
+  // New tools
+  const [showStopwatch, setShowStopwatch] = useState(false);
+  const [showConverter, setShowConverter] = useState(false);
+  const [showSolver, setShowSolver] = useState(false);
+
+  // Draggable calculator
+  const calcDrag = useDraggable({ initialX: typeof window !== "undefined" ? window.innerWidth - 280 : 600, initialY: typeof window !== "undefined" ? window.innerHeight - 500 : 300 });
+
   const calcInput = (val: string) => {
     if (calcReset || calcDisplay === "0") {
       setCalcDisplay(val);
@@ -303,6 +315,21 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
       if (e.altKey && e.key.toLowerCase() === "c") {
         e.preventDefault();
         setShowCalc((prev) => !prev);
+      }
+      // Alt+S — toggle stopwatch/timer
+      if (e.altKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        setShowStopwatch((prev) => !prev);
+      }
+      // Alt+U — toggle unit converter
+      if (e.altKey && e.key.toLowerCase() === "u") {
+        e.preventDefault();
+        setShowConverter((prev) => !prev);
+      }
+      // Alt+E — toggle equation solver
+      if (e.altKey && e.key.toLowerCase() === "e") {
+        e.preventDefault();
+        setShowSolver((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handleShortcut);
@@ -1253,6 +1280,9 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
                 ["Alt + F", "Toggle fullscreen proxy"],
                 ["Alt + /", "Show/hide this help"],
                 ["Alt + C", "Toggle calculator"],
+                ["Alt + S", "Toggle stopwatch/timer"],
+                ["Alt + U", "Toggle unit converter"],
+                ["Alt + E", "Toggle equation solver"],
                 [profile.panicKey === " " ? "Space" : profile.panicKey, "Panic key (global)"],
               ].map(([key, desc]) => (
                 <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
@@ -1267,8 +1297,8 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
 
       {/* Calculator Modal */}
       {showCalc && (
-        <div className="fixed bottom-20 right-6 z-50 bg-card border border-border rounded-lg shadow-lg" style={{ boxShadow: "var(--glow)", width: calcMode === "sci" ? "320px" : "256px" }}>
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+        <div className="fixed z-50 bg-card border border-border rounded-lg shadow-lg" style={{ left: calcDrag.pos.x, top: calcDrag.pos.y, boxShadow: "var(--glow)", width: calcMode === "sci" ? "320px" : "256px" }}>
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border cursor-move select-none" onMouseDown={calcDrag.onMouseDown}>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-primary uppercase tracking-widest">Calc</span>
               <button onClick={() => setCalcMode(calcMode === "basic" ? "sci" : "basic")} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors">
@@ -1377,6 +1407,15 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
           </div>
         </div>
       )}
+
+      {/* Stopwatch/Timer */}
+      {showStopwatch && <StopwatchTimer onClose={() => setShowStopwatch(false)} />}
+
+      {/* Unit Converter */}
+      {showConverter && <UnitConverter onClose={() => setShowConverter(false)} />}
+
+      {/* Equation Solver */}
+      {showSolver && <EquationSolver onClose={() => setShowSolver(false)} />}
 
       <footer className="border-t border-border px-6 py-3 text-center">
         <p className="text-xs text-muted-foreground font-mono">
