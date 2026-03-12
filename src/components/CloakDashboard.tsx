@@ -1408,7 +1408,15 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
         </div>
       )}
 
-      <footer className="border-t border-border px-6 py-3 text-center">
+      {/* Stopwatch/Timer */}
+      {showStopwatch && <StopwatchTimer onClose={() => setShowStopwatch(false)} />}
+
+      {/* Unit Converter */}
+      {showConverter && <UnitConverter onClose={() => setShowConverter(false)} />}
+
+      {/* Equation Solver */}
+      {showSolver && <EquationSolver onClose={() => setShowSolver(false)} />}
+
         <p className="text-xs text-muted-foreground font-mono">
           Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-foreground">{profile.panicKey === " " ? "Space" : profile.panicKey}</kbd> for panic mode
           · <button onClick={() => setShowShortcuts(true)} className="underline hover:text-foreground transition-colors">Alt+/ for shortcuts</button>
