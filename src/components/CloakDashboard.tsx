@@ -171,6 +171,14 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
   const [showCalcHistory, setShowCalcHistory] = useState(false);
   const [calcDeg, setCalcDeg] = useState(true); // true=degrees, false=radians
 
+  // New tools
+  const [showStopwatch, setShowStopwatch] = useState(false);
+  const [showConverter, setShowConverter] = useState(false);
+  const [showSolver, setShowSolver] = useState(false);
+
+  // Draggable calculator
+  const calcDrag = useDraggable({ initialX: typeof window !== "undefined" ? window.innerWidth - 280 : 600, initialY: typeof window !== "undefined" ? window.innerHeight - 500 : 300 });
+
   const calcInput = (val: string) => {
     if (calcReset || calcDisplay === "0") {
       setCalcDisplay(val);
