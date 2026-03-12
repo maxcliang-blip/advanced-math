@@ -6,6 +6,10 @@ import ProfileSection from "@/components/ProfileSection";
 import { loadProfile, type UserProfile } from "@/lib/profile";
 import { themes, loadTheme, applyTheme } from "@/lib/themes";
 import { tabPresets, applyCloakPreset, loadActiveCloak, clearCloak, type TabPreset } from "@/lib/tabCloak";
+import StopwatchTimer from "@/components/StopwatchTimer";
+import UnitConverter from "@/components/UnitConverter";
+import EquationSolver from "@/components/EquationSolver";
+import { useDraggable } from "@/hooks/use-draggable";
 import {
   EyeOff,
   ExternalLink,
