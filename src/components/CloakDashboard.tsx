@@ -1280,6 +1280,9 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
                 ["Alt + F", "Toggle fullscreen proxy"],
                 ["Alt + /", "Show/hide this help"],
                 ["Alt + C", "Toggle calculator"],
+                ["Alt + S", "Toggle stopwatch/timer"],
+                ["Alt + U", "Toggle unit converter"],
+                ["Alt + E", "Toggle equation solver"],
                 [profile.panicKey === " " ? "Space" : profile.panicKey, "Panic key (global)"],
               ].map(([key, desc]) => (
                 <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
