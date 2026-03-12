@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Shield, Eye, EyeOff, Lock, Smartphone, Clock, TriangleAlert as AlertTriangle, Activity } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Shield, Eye, EyeOff, Lock, Smartphone, Clock,
+  TriangleAlert as AlertTriangle, Activity, Ban,
+  MousePointerClick, TabletSmartphone, Bomb, Trash2, KeyRound
+} from "lucide-react";
 import {
   loadSecuritySettings,
   saveSecuritySettings,
@@ -11,7 +16,8 @@ import {
   getFailedAttempts,
   clearFailedAttempts,
   getSessionDuration,
-  detectSuspiciousActivity
+  detectSuspiciousActivity,
+  emergencyWipe,
 } from "@/lib/security";
 
 interface SecuritySectionProps {
@@ -25,17 +31,18 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
   const [failedAttempts, setFailedAttemptsState] = useState(getFailedAttempts());
   const [sessionTime, setSessionTime] = useState(getSessionDuration());
   const [suspiciousActivity, setSuspiciousActivity] = useState(false);
+  const [decoyInput, setDecoyInput] = useState(settings.decoyPassword);
+  const [decoyEditing, setDecoyEditing] = useState(false);
+  const [wipeConfirm, setWipeConfirm] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setSessionTime(getSessionDuration());
-
       if (settings.enableActivityMonitor) {
         const suspicious = detectSuspiciousActivity();
         setSuspiciousActivity(suspicious);
       }
     }, 1000);
-
     return () => clearInterval(interval);
   }, [settings.enableActivityMonitor]);
 
@@ -68,11 +75,66 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
     setFailedAttemptsState(0);
   };
 
+  const handleSaveDecoy = () => {
+    const newSettings = { ...settings, decoyPassword: decoyInput.trim() };
+    setSettings(newSettings);
+    saveSecuritySettings(newSettings);
+    onSecurityChange?.(newSettings);
+    setDecoyEditing(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+
+  const handleEmergencyWipe = () => {
+    if (!wipeConfirm) {
+      setWipeConfirm(true);
+      setTimeout(() => setWipeConfirm(false), 4000);
+      return;
+    }
+    emergencyWipe();
+    setWipeConfirm(false);
+    window.location.reload();
+  };
+
   const formatSessionTime = (ms: number): string => {
     const minutes = Math.floor(ms / 60000);
     const seconds = Math.floor((ms % 60000) / 1000);
     return `${minutes}m ${seconds}s`;
   };
+
+  const ToggleRow = ({
+    icon,
+    label,
+    description,
+    settingKey,
+    extra,
+  }: {
+    icon: React.ReactNode;
+    label: string;
+    description: string;
+    settingKey: keyof SecuritySettings;
+    extra?: React.ReactNode;
+  }) => (
+    <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary/30">
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          {icon}
+          <span className="text-sm font-mono text-foreground">{label}</span>
+        </div>
+        <p className="text-xs text-muted-foreground">{description}</p>
+        {extra}
+      </div>
+      <Button
+        onClick={() => handleToggle(settingKey)}
+        variant={settings[settingKey] ? "default" : "outline"}
+        size="sm"
+        className="text-xs font-mono ml-3"
+        data-testid={`toggle-${settingKey}`}
+      >
+        {settings[settingKey] ? "ON" : "OFF"}
+      </Button>
+    </div>
+  );
 
   return (
     <section className="space-y-4 border-t border-border pt-6">
@@ -81,6 +143,9 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
       </h2>
 
       <div className="space-y-3">
+
+        {/* --- Existing features --- */}
+
         <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary/30">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
@@ -96,6 +161,7 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
             variant={settings.enableSafeMode ? "default" : "outline"}
             size="sm"
             className="text-xs font-mono"
+            data-testid="toggle-enableSafeMode"
           >
             {settings.enableSafeMode ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
           </Button>
@@ -121,50 +187,25 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
             variant={settings.enableActivityMonitor ? "default" : "outline"}
             size="sm"
             className="text-xs font-mono"
+            data-testid="toggle-enableActivityMonitor"
           >
             {settings.enableActivityMonitor ? "ON" : "OFF"}
           </Button>
         </div>
 
-        <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary/30">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <Eye className="h-4 w-4 text-primary" />
-              <span className="text-sm font-mono text-foreground">Screenshot Protection</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Blocks screen capture attempts
-            </p>
-          </div>
-          <Button
-            onClick={() => handleToggle("enableScreenshotProtection")}
-            variant={settings.enableScreenshotProtection ? "default" : "outline"}
-            size="sm"
-            className="text-xs font-mono"
-          >
-            {settings.enableScreenshotProtection ? "ON" : "OFF"}
-          </Button>
-        </div>
+        <ToggleRow
+          icon={<Eye className="h-4 w-4 text-primary" />}
+          label="Screenshot Protection"
+          description="Blocks screen capture attempts"
+          settingKey="enableScreenshotProtection"
+        />
 
-        <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary/30">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <Lock className="h-4 w-4 text-primary" />
-              <span className="text-sm font-mono text-foreground">Clipboard Protection</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Prevents copying sensitive data
-            </p>
-          </div>
-          <Button
-            onClick={() => handleToggle("enableClipboardProtection")}
-            variant={settings.enableClipboardProtection ? "default" : "outline"}
-            size="sm"
-            className="text-xs font-mono"
-          >
-            {settings.enableClipboardProtection ? "ON" : "OFF"}
-          </Button>
-        </div>
+        <ToggleRow
+          icon={<Lock className="h-4 w-4 text-primary" />}
+          label="Clipboard Protection"
+          description="Prevents copying sensitive data"
+          settingKey="enableClipboardProtection"
+        />
 
         <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary/30">
           <div className="flex-1">
@@ -176,9 +217,7 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
               Restrict access to this device only
             </p>
             {deviceTrusted && (
-              <p className="text-xs text-primary font-mono mt-1">
-                This device is trusted
-              </p>
+              <p className="text-xs text-primary font-mono mt-1">This device is trusted</p>
             )}
           </div>
           <div className="flex gap-2">
@@ -187,6 +226,7 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
               variant={deviceTrusted ? "destructive" : "outline"}
               size="sm"
               className="text-xs font-mono"
+              data-testid="button-trust-device"
             >
               {deviceTrusted ? "Untrust" : "Trust"}
             </Button>
@@ -195,6 +235,7 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
               variant={settings.trustedDeviceOnly ? "default" : "outline"}
               size="sm"
               className="text-xs font-mono"
+              data-testid="toggle-trustedDeviceOnly"
             >
               {settings.trustedDeviceOnly ? "ON" : "OFF"}
             </Button>
@@ -217,6 +258,7 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
                 size="sm"
                 onClick={() => handleTimeoutChange(min)}
                 className="text-xs font-mono"
+                data-testid={`button-timeout-${min}`}
               >
                 {min === 0 ? "Off" : `${min}m`}
               </Button>
@@ -227,6 +269,105 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
           </p>
         </div>
 
+        <ToggleRow
+          icon={<Lock className="h-4 w-4 text-primary" />}
+          label="Require Re-authentication"
+          description="Ask for password before sensitive actions"
+          settingKey="requireReauth"
+        />
+
+        {/* --- New features --- */}
+
+        <ToggleRow
+          icon={<Ban className="h-4 w-4 text-primary" />}
+          label="Block DevTools Shortcuts"
+          description="Disables F12, Ctrl+Shift+I, Ctrl+U key combos"
+          settingKey="blockDevTools"
+        />
+
+        <ToggleRow
+          icon={<MousePointerClick className="h-4 w-4 text-primary" />}
+          label="Disable Right-Click"
+          description="Prevents inspect element via context menu"
+          settingKey="disableRightClick"
+        />
+
+        <ToggleRow
+          icon={<TabletSmartphone className="h-4 w-4 text-primary" />}
+          label="Lock on Tab Switch"
+          description="Auto-locks when you navigate away from this tab"
+          settingKey="lockOnTabSwitch"
+        />
+
+        <ToggleRow
+          icon={<Bomb className="h-4 w-4 text-primary" />}
+          label="Panic on DevTools Detection"
+          description="Triggers panic mode if browser DevTools are opened"
+          settingKey="enablePanicOnDevTools"
+        />
+
+        {/* Decoy Password */}
+        <div className="p-3 rounded-lg border border-border bg-secondary/30">
+          <div className="flex items-center gap-2 mb-1">
+            <KeyRound className="h-4 w-4 text-primary" />
+            <span className="text-sm font-mono text-foreground">Decoy Password</span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            A second password that shows a blank decoy screen instead of the real dashboard
+          </p>
+          {decoyEditing ? (
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                value={decoyInput}
+                onChange={(e) => setDecoyInput(e.target.value)}
+                placeholder="Enter decoy password"
+                className="text-xs font-mono h-8"
+                data-testid="input-decoy-password"
+              />
+              <Button size="sm" onClick={handleSaveDecoy} className="text-xs font-mono">
+                Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => { setDecoyEditing(false); setDecoyInput(settings.decoyPassword); }} className="text-xs font-mono">
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-muted-foreground flex-1">
+                {settings.decoyPassword ? "••••••••" : "Not set"}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setDecoyEditing(true)}
+                className="text-xs font-mono"
+                data-testid="button-edit-decoy"
+              >
+                {settings.decoyPassword ? "Change" : "Set"}
+              </Button>
+              {settings.decoyPassword && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const newSettings = { ...settings, decoyPassword: "" };
+                    setSettings(newSettings);
+                    saveSecuritySettings(newSettings);
+                    setDecoyInput("");
+                  }}
+                  className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10"
+                  data-testid="button-clear-decoy"
+                >
+                  Clear
+                </Button>
+              )}
+              {saved && <span className="text-xs text-primary font-mono">Saved</span>}
+            </div>
+          )}
+        </div>
+
+        {/* Failed attempts alert */}
         {failedAttempts > 0 && (
           <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/10">
             <div className="flex items-center justify-between">
@@ -244,6 +385,7 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
                 variant="outline"
                 size="sm"
                 className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10"
+                data-testid="button-clear-attempts"
               >
                 Clear
               </Button>
@@ -251,25 +393,26 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
           </div>
         )}
 
-        <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary/30">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <Lock className="h-4 w-4 text-primary" />
-              <span className="text-sm font-mono text-foreground">Require Re-authentication</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Ask for password before sensitive actions
-            </p>
+        {/* Emergency Data Wipe */}
+        <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/5">
+          <div className="flex items-center gap-2 mb-1">
+            <Trash2 className="h-4 w-4 text-destructive" />
+            <span className="text-sm font-mono text-destructive">Emergency Data Wipe</span>
           </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Immediately clears all CLOAK settings, passwords, and stored data. Cannot be undone.
+          </p>
           <Button
-            onClick={() => handleToggle("requireReauth")}
-            variant={settings.requireReauth ? "default" : "outline"}
+            onClick={handleEmergencyWipe}
+            variant="destructive"
             size="sm"
             className="text-xs font-mono"
+            data-testid="button-emergency-wipe"
           >
-            {settings.requireReauth ? "ON" : "OFF"}
+            {wipeConfirm ? "Confirm — this cannot be undone" : "Wipe All Data"}
           </Button>
         </div>
+
       </div>
     </section>
   );

@@ -6,6 +6,11 @@ export interface SecuritySettings {
   trustedDeviceOnly: boolean;
   sessionTimeout: number;
   requireReauth: boolean;
+  blockDevTools: boolean;
+  disableRightClick: boolean;
+  lockOnTabSwitch: boolean;
+  enablePanicOnDevTools: boolean;
+  decoyPassword: string;
 }
 
 const SECURITY_KEY = "cloak_security_settings";
@@ -21,6 +26,11 @@ const defaults: SecuritySettings = {
   trustedDeviceOnly: false,
   sessionTimeout: 0,
   requireReauth: false,
+  blockDevTools: false,
+  disableRightClick: false,
+  lockOnTabSwitch: false,
+  enablePanicOnDevTools: false,
+  decoyPassword: "",
 };
 
 export function loadSecuritySettings(): SecuritySettings {
@@ -92,7 +102,6 @@ export function clearSession() {
 
 export function enableScreenshotProtection() {
   document.body.classList.add("screenshot-protected");
-
   document.addEventListener("keyup", (e) => {
     if ((e.key === "PrintScreen" || e.key === "Print") && !e.repeat) {
       navigator.clipboard.writeText("Screenshot blocked by CLOAK security");
@@ -119,13 +128,11 @@ export function detectSuspiciousActivity(): boolean {
   consoleDetection.toString = function() {
     return "DevTools detected";
   };
-
   const start = performance.now();
   const debuggerCheck = () => {
     const end = performance.now();
     return end - start > 100;
   };
-
   return debuggerCheck();
 }
 
@@ -139,4 +146,102 @@ export function unlockMode() {
   document.body.style.filter = "none";
   document.body.style.userSelect = "auto";
   document.body.style.pointerEvents = "auto";
+}
+
+// --- New security features ---
+
+let devToolsHandler: ((e: KeyboardEvent) => void) | null = null;
+
+export function enableDevToolsBlock() {
+  devToolsHandler = (e: KeyboardEvent) => {
+    const blocked =
+      e.key === "F12" ||
+      (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "i" || e.key === "J" || e.key === "j" || e.key === "C" || e.key === "c")) ||
+      (e.ctrlKey && (e.key === "U" || e.key === "u"));
+    if (blocked) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+  document.addEventListener("keydown", devToolsHandler, true);
+}
+
+export function disableDevToolsBlock() {
+  if (devToolsHandler) {
+    document.removeEventListener("keydown", devToolsHandler, true);
+    devToolsHandler = null;
+  }
+}
+
+let contextMenuHandler: ((e: MouseEvent) => void) | null = null;
+
+export function enableRightClickDisable() {
+  contextMenuHandler = (e: MouseEvent) => e.preventDefault();
+  document.addEventListener("contextmenu", contextMenuHandler);
+}
+
+export function disableRightClickDisable() {
+  if (contextMenuHandler) {
+    document.removeEventListener("contextmenu", contextMenuHandler);
+    contextMenuHandler = null;
+  }
+}
+
+let visibilityHandler: (() => void) | null = null;
+
+export function enableTabVisibilityLock(onLock: () => void) {
+  visibilityHandler = () => {
+    if (document.hidden) {
+      onLock();
+    }
+  };
+  document.addEventListener("visibilitychange", visibilityHandler);
+}
+
+export function disableTabVisibilityLock() {
+  if (visibilityHandler) {
+    document.removeEventListener("visibilitychange", visibilityHandler);
+    visibilityHandler = null;
+  }
+}
+
+let devToolsDetectionInterval: ReturnType<typeof setInterval> | null = null;
+
+export function enablePanicOnDevToolsDetection(onPanic: () => void) {
+  devToolsDetectionInterval = setInterval(() => {
+    const threshold = 160;
+    const widthDiff = window.outerWidth - window.innerWidth > threshold;
+    const heightDiff = window.outerHeight - window.innerHeight > threshold;
+    if (widthDiff || heightDiff) {
+      onPanic();
+    }
+  }, 1000);
+}
+
+export function disablePanicOnDevToolsDetection() {
+  if (devToolsDetectionInterval) {
+    clearInterval(devToolsDetectionInterval);
+    devToolsDetectionInterval = null;
+  }
+}
+
+export function isDecoyPassword(input: string): boolean {
+  const settings = loadSecuritySettings();
+  return (
+    settings.decoyPassword.length > 0 &&
+    input === settings.decoyPassword
+  );
+}
+
+export function emergencyWipe() {
+  const keysToKeep: string[] = [];
+  const preserve: Record<string, string> = {};
+  keysToKeep.forEach((k) => {
+    const v = localStorage.getItem(k);
+    if (v !== null) preserve[k] = v;
+  });
+  localStorage.clear();
+  keysToKeep.forEach((k) => {
+    if (preserve[k] !== undefined) localStorage.setItem(k, preserve[k]);
+  });
 }

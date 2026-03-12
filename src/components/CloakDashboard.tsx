@@ -26,6 +26,7 @@ interface CloakDashboardProps {
   onPanic: () => void;
   onLogout: () => void;
   onProfileChange?: (profile: UserProfile) => void;
+  onSecurityChange?: (settings: SecuritySettings) => void;
 }
 
 interface BookmarkItem {
@@ -70,7 +71,7 @@ function deobfuscate(encoded: string, key: string): string {
   }
 }
 
-const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardProps) => {
+const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }: CloakDashboardProps) => {
   const [profile, setProfile] = useState<UserProfile>(loadProfile);
   const [security, setSecurity] = useState<SecuritySettings>(loadSecuritySettings);
   const [url, setUrl] = useState("");
@@ -1236,6 +1237,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
         <SecuritySection
           onSecurityChange={(s) => {
             setSecurity(s);
+            onSecurityChange?.(s);
           }}
         />
 

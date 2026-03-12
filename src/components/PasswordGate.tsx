@@ -8,17 +8,19 @@ import {
   getFailedAttempts,
   isDeviceTrusted,
   setTrustedDevice,
-  loadSecuritySettings
+  loadSecuritySettings,
+  isDecoyPassword,
 } from "@/lib/security";
 
 interface PasswordGateProps {
   onUnlock: () => void;
+  onDecoy?: () => void;
 }
 
 const FIXED_PASSWORD = "LAXMIANG";
 const MAX_ATTEMPTS = 5;
 
-const PasswordGate = ({ onUnlock }: PasswordGateProps) => {
+const PasswordGate = ({ onUnlock, onDecoy }: PasswordGateProps) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [locked, setLocked] = useState(false);
@@ -59,6 +61,12 @@ const PasswordGate = ({ onUnlock }: PasswordGateProps) => {
     }
 
     setError("");
+
+    if (isDecoyPassword(password) && onDecoy) {
+      onDecoy();
+      return;
+    }
+
     if (password === FIXED_PASSWORD) {
       clearFailedAttempts();
       if (security.trustedDeviceOnly && !isDeviceTrusted()) {
@@ -113,6 +121,7 @@ const PasswordGate = ({ onUnlock }: PasswordGateProps) => {
                 className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/30"
                 autoFocus
                 disabled={locked && countdown > 0}
+                data-testid="input-password"
               />
             </div>
 
@@ -134,6 +143,7 @@ const PasswordGate = ({ onUnlock }: PasswordGateProps) => {
               type="submit"
               disabled={locked && countdown > 0}
               className="w-full bg-primary text-primary-foreground hover:bg-primary/80 glow-box font-display font-semibold tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="button-unlock"
             >
               {locked && countdown > 0 ? `LOCKED (${countdown}s)` : "UNLOCK"}
             </Button>
