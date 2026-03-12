@@ -1297,8 +1297,8 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
 
       {/* Calculator Modal */}
       {showCalc && (
-        <div className="fixed bottom-20 right-6 z-50 bg-card border border-border rounded-lg shadow-lg" style={{ boxShadow: "var(--glow)", width: calcMode === "sci" ? "320px" : "256px" }}>
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+        <div className="fixed z-50 bg-card border border-border rounded-lg shadow-lg" style={{ left: calcDrag.pos.x, top: calcDrag.pos.y, boxShadow: "var(--glow)", width: calcMode === "sci" ? "320px" : "256px" }}>
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border cursor-move select-none" onMouseDown={calcDrag.onMouseDown}>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-primary uppercase tracking-widest">Calc</span>
               <button onClick={() => setCalcMode(calcMode === "basic" ? "sci" : "basic")} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors">
