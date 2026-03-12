@@ -316,6 +316,21 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
         e.preventDefault();
         setShowCalc((prev) => !prev);
       }
+      // Alt+S — toggle stopwatch/timer
+      if (e.altKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        setShowStopwatch((prev) => !prev);
+      }
+      // Alt+U — toggle unit converter
+      if (e.altKey && e.key.toLowerCase() === "u") {
+        e.preventDefault();
+        setShowConverter((prev) => !prev);
+      }
+      // Alt+E — toggle equation solver
+      if (e.altKey && e.key.toLowerCase() === "e") {
+        e.preventDefault();
+        setShowSolver((prev) => !prev);
+      }
     };
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
