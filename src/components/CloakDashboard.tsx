@@ -19,8 +19,9 @@ import {
 import StopwatchTimer from "@/components/StopwatchTimer";
 import UnitConverter from "@/components/UnitConverter";
 import EquationSolver from "@/components/EquationSolver";
+import GraphingCalculator from "@/components/GraphingCalculator";
 import { useDraggable } from "@/hooks/use-draggable";
-import { EyeOff, ExternalLink, Shield, TriangleAlert as AlertTriangle, Trash2, Settings, Clock, X, Bookmark, BookmarkPlus, Pencil, Check, Globe, ArrowLeft, ArrowRight, RotateCw, Maximize2, Minimize2, Palette, FolderPlus, Folder, Eye, EyeOff as EyeOffIcon, ShieldCheck, Search, Ban, Plus, FileText, Lock, History, ChevronDown } from "lucide-react";
+import { EyeOff, ExternalLink, Shield, TriangleAlert as AlertTriangle, Trash2, Settings, Clock, X, Bookmark, BookmarkPlus, Pencil, Check, Globe, ArrowLeft, ArrowRight, RotateCw, Maximize2, Minimize2, Palette, FolderPlus, Folder, Eye, EyeOff as EyeOffIcon, ShieldCheck, Search, Ban, Plus, FileText, Lock, History, ChevronDown, TrendingUp } from "lucide-react";
 
 interface CloakDashboardProps {
   onPanic: () => void;
@@ -155,6 +156,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
   const [showStopwatch, setShowStopwatch] = useState(false);
   const [showConverter, setShowConverter] = useState(false);
   const [showSolver, setShowSolver] = useState(false);
+  const [showGrapher, setShowGrapher] = useState(false);
 
   // Draggable calculator
   const calcDrag = useDraggable({ initialX: typeof window !== "undefined" ? window.innerWidth - 280 : 600, initialY: typeof window !== "undefined" ? window.innerHeight - 500 : 300 });
@@ -349,6 +351,11 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
       if (e.altKey && e.key.toLowerCase() === "e") {
         e.preventDefault();
         setShowSolver((prev) => !prev);
+      }
+      // Alt+G — toggle graphing calculator
+      if (e.altKey && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        setShowGrapher((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handleShortcut);
@@ -1032,6 +1039,35 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
           </div>
         </section>
 
+        {/* Quick Tools */}
+        <section className="space-y-4 border-t border-border pt-6">
+          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+            <Settings className="h-4 w-4" /> Quick Tools
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: "Calculator", shortcut: "Alt+C", onClick: () => setShowCalc((p) => !p), active: showCalc },
+              { label: "Stopwatch", shortcut: "Alt+S", onClick: () => setShowStopwatch((p) => !p), active: showStopwatch },
+              { label: "Converter", shortcut: "Alt+U", onClick: () => setShowConverter((p) => !p), active: showConverter },
+              { label: "Equation Solver", shortcut: "Alt+E", onClick: () => setShowSolver((p) => !p), active: showSolver },
+              { label: "Graph", shortcut: "Alt+G", onClick: () => setShowGrapher((p) => !p), active: showGrapher },
+            ].map(({ label, shortcut, onClick, active }) => (
+              <Button
+                key={label}
+                variant="outline"
+                size="sm"
+                onClick={onClick}
+                className={`text-xs font-mono border-border gap-1 ${active ? "text-primary border-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"}`}
+                data-testid={`tool-btn-${label.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                {label === "Graph" && <TrendingUp className="h-3 w-3" />}
+                {label}
+                <span className="text-[9px] opacity-50 ml-0.5">{shortcut}</span>
+              </Button>
+            ))}
+          </div>
+        </section>
+
         {/* History */}
         {history.length > 0 && (
           <section className="space-y-4 border-t border-border pt-6">
@@ -1310,6 +1346,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
                 ["Alt + S", "Toggle stopwatch/timer"],
                 ["Alt + U", "Toggle unit converter"],
                 ["Alt + E", "Toggle equation solver"],
+                ["Alt + G", "Toggle graphing calculator"],
                 [profile.panicKey === " " ? "Space" : profile.panicKey, "Panic key (global)"],
               ].map(([key, desc]) => (
                 <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
@@ -1443,6 +1480,9 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
 
       {/* Equation Solver */}
       {showSolver && <EquationSolver onClose={() => setShowSolver(false)} />}
+
+      {/* Graphing Calculator */}
+      {showGrapher && <GraphingCalculator onClose={() => setShowGrapher(false)} />}
 
       <footer className="border-t border-border px-6 py-3 text-center">
         <p className="text-xs text-muted-foreground font-mono">
