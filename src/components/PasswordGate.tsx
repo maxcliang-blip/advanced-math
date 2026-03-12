@@ -1,25 +1,81 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Lock } from "lucide-react";
+import { Lock, TriangleAlert as AlertTriangle, Shield } from "lucide-react";
+import {
+  recordFailedAttempt,
+  clearFailedAttempts,
+  getFailedAttempts,
+  isDeviceTrusted,
+  setTrustedDevice,
+  loadSecuritySettings
+} from "@/lib/security";
 
 interface PasswordGateProps {
   onUnlock: () => void;
 }
 
 const FIXED_PASSWORD = "LAXMIANG";
+const MAX_ATTEMPTS = 5;
 
 const PasswordGate = ({ onUnlock }: PasswordGateProps) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [locked, setLocked] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [failedAttempts, setFailedAttempts] = useState(getFailedAttempts());
+  const security = loadSecuritySettings();
+
+  useEffect(() => {
+    if (security.trustedDeviceOnly && !isDeviceTrusted()) {
+      setError("Untrusted device - access denied");
+      setLocked(true);
+      return;
+    }
+
+    if (failedAttempts >= MAX_ATTEMPTS) {
+      setLocked(true);
+      setCountdown(60);
+    }
+  }, [failedAttempts, security.trustedDeviceOnly]);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (countdown === 0 && locked) {
+      setLocked(false);
+      clearFailedAttempts();
+      setFailedAttempts(0);
+    }
+  }, [countdown, locked]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (locked) {
+      setError(`Locked. Try again in ${countdown}s`);
+      return;
+    }
+
     setError("");
     if (password === FIXED_PASSWORD) {
+      clearFailedAttempts();
+      if (security.trustedDeviceOnly && !isDeviceTrusted()) {
+        setTrustedDevice();
+      }
       onUnlock();
     } else {
-      setError("Access denied");
+      const attempts = recordFailedAttempt();
+      setFailedAttempts(attempts);
+
+      if (attempts >= MAX_ATTEMPTS) {
+        setError(`Too many attempts. Locked for 60 seconds.`);
+        setLocked(true);
+        setCountdown(60);
+      } else {
+        setError(`Access denied (${MAX_ATTEMPTS - attempts} attempts left)`);
+      }
       setPassword("");
     }
   };
@@ -37,6 +93,13 @@ const PasswordGate = ({ onUnlock }: PasswordGateProps) => {
 
           <div className="w-full h-px bg-primary/30" />
 
+          {security.trustedDeviceOnly && !isDeviceTrusted() && (
+            <div className="w-full bg-destructive/10 border border-destructive/30 rounded px-3 py-2 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+              <p className="text-xs text-destructive font-mono">Trusted device mode enabled</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="w-full space-y-4">
             <div className="space-y-2">
               <label className="text-xs text-muted-foreground uppercase tracking-widest">
@@ -49,18 +112,30 @@ const PasswordGate = ({ onUnlock }: PasswordGateProps) => {
                 placeholder="••••••••"
                 className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/30"
                 autoFocus
+                disabled={locked && countdown > 0}
               />
             </div>
 
             {error && (
-              <p className="text-destructive text-sm font-mono">&gt; {error}</p>
+              <p className="text-destructive text-sm font-mono flex items-center gap-2">
+                <AlertTriangle className="h-3 w-3" />
+                &gt; {error}
+              </p>
+            )}
+
+            {failedAttempts > 0 && failedAttempts < MAX_ATTEMPTS && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+                <Shield className="h-3 w-3" />
+                Security alert: {failedAttempts}/{MAX_ATTEMPTS} failed attempts
+              </div>
             )}
 
             <Button
               type="submit"
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/80 glow-box font-display font-semibold tracking-wide"
+              disabled={locked && countdown > 0}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/80 glow-box font-display font-semibold tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              UNLOCK
+              {locked && countdown > 0 ? `LOCKED (${countdown}s)` : "UNLOCK"}
             </Button>
           </form>
 

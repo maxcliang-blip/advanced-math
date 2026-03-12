@@ -3,46 +3,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import ProfileSection from "@/components/ProfileSection";
+import SecuritySection from "@/components/SecuritySection";
 import { loadProfile, type UserProfile } from "@/lib/profile";
 import { themes, loadTheme, applyTheme } from "@/lib/themes";
 import { tabPresets, applyCloakPreset, loadActiveCloak, clearCloak, type TabPreset } from "@/lib/tabCloak";
+import {
+  loadSecuritySettings,
+  type SecuritySettings,
+  enableScreenshotProtection,
+  disableScreenshotProtection,
+  startSession,
+  clearSession,
+  getSessionDuration
+} from "@/lib/security";
 import StopwatchTimer from "@/components/StopwatchTimer";
 import UnitConverter from "@/components/UnitConverter";
 import EquationSolver from "@/components/EquationSolver";
 import { useDraggable } from "@/hooks/use-draggable";
-import {
-  EyeOff,
-  ExternalLink,
-  Shield,
-  AlertTriangle,
-  Trash2,
-  Settings,
-  Clock,
-  X,
-  Bookmark,
-  BookmarkPlus,
-  Pencil,
-  Check,
-  Globe,
-  ArrowLeft,
-  ArrowRight,
-  RotateCw,
-  Maximize2,
-  Minimize2,
-  Palette,
-  FolderPlus,
-  Folder,
-  Eye,
-  EyeOff as EyeOffIcon,
-  ShieldCheck,
-  Search,
-  Ban,
-  Plus,
-  FileText,
-  Lock,
-  History,
-  ChevronDown,
-} from "lucide-react";
+import { EyeOff, ExternalLink, Shield, TriangleAlert as AlertTriangle, Trash2, Settings, Clock, X, Bookmark, BookmarkPlus, Pencil, Check, Globe, ArrowLeft, ArrowRight, RotateCw, Maximize2, Minimize2, Palette, FolderPlus, Folder, Eye, EyeOff as EyeOffIcon, ShieldCheck, Search, Ban, Plus, FileText, Lock, History, ChevronDown } from "lucide-react";
 
 interface CloakDashboardProps {
   onPanic: () => void;
@@ -94,6 +72,7 @@ function deobfuscate(encoded: string, key: string): string {
 
 const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardProps) => {
   const [profile, setProfile] = useState<UserProfile>(loadProfile);
+  const [security, setSecurity] = useState<SecuritySettings>(loadSecuritySettings);
   const [url, setUrl] = useState("");
   const [tabTitle, setTabTitle] = useState("Google");
   const [tabIcon, setTabIcon] = useState("https://www.google.com/favicon.ico");
@@ -261,6 +240,45 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
 
   // Apply theme on load
   useEffect(() => { applyTheme(currentTheme); }, []);
+
+  // Initialize security features
+  useEffect(() => {
+    startSession();
+
+    if (security.enableScreenshotProtection) {
+      enableScreenshotProtection();
+    }
+
+    return () => {
+      if (security.enableScreenshotProtection) {
+        disableScreenshotProtection();
+      }
+      clearSession();
+    };
+  }, []);
+
+  // Session timeout handler
+  useEffect(() => {
+    if (security.sessionTimeout === 0) return;
+
+    const checkTimeout = setInterval(() => {
+      const duration = getSessionDuration();
+      if (duration > security.sessionTimeout * 60 * 1000) {
+        onLogout();
+      }
+    }, 10000);
+
+    return () => clearInterval(checkTimeout);
+  }, [security.sessionTimeout, onLogout]);
+
+  // Screenshot protection toggle
+  useEffect(() => {
+    if (security.enableScreenshotProtection) {
+      enableScreenshotProtection();
+    } else {
+      disableScreenshotProtection();
+    }
+  }, [security.enableScreenshotProtection]);
 
   // Keyboard shortcuts handler
   useEffect(() => {
@@ -1213,6 +1231,13 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange }: CloakDashboardPr
             <p className="text-xs text-muted-foreground font-mono">No bookmarks in "{activeFolder}" — use the <BookmarkPlus className="inline h-3 w-3" /> button to add one</p>
           )}
         </section>
+
+        {/* Security */}
+        <SecuritySection
+          onSecurityChange={(s) => {
+            setSecurity(s);
+          }}
+        />
 
         {/* Profile */}
         <ProfileSection
