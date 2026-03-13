@@ -29,6 +29,46 @@ const PasswordGate = ({ onUnlock, onDecoy }: PasswordGateProps) => {
   const [countdown, setCountdown] = useState(0);
   const [failedAttempts, setFailedAttempts] = useState(getFailedAttempts());
   const security = loadSecuritySettings();
+  
+  // Keystroke pattern state
+  const storedPattern = loadKeystrokePattern();
+  const patternEnabled = security.keystrokePatternLock && storedPattern;
+  const [patternMode, setPatternMode] = useState(false);
+  const [patternTaps, setPatternTaps] = useState<number[]>([]);
+  const lastTapRef = useRef<number>(0);
+  const [patternResult, setPatternResult] = useState<string>("");
+
+  const handlePatternTap = useCallback(() => {
+    const now = Date.now();
+    if (lastTapRef.current > 0) {
+      setPatternTaps(prev => [...prev, now - lastTapRef.current]);
+    }
+    lastTapRef.current = now;
+    
+    // Check if we have enough taps
+    if (storedPattern && patternTaps.length + 1 >= storedPattern.intervals.length) {
+      const attempt = [...patternTaps, now - lastTapRef.current].slice(0, storedPattern.intervals.length);
+      // Need to wait for state update, so check on next tap
+    }
+  }, [patternTaps, storedPattern]);
+
+  // Check pattern match when taps reach required length
+  useEffect(() => {
+    if (!storedPattern || !patternMode) return;
+    if (patternTaps.length === storedPattern.intervals.length) {
+      if (matchKeystrokePattern(storedPattern, patternTaps)) {
+        clearFailedAttempts();
+        setPatternResult("");
+        onUnlock();
+      } else {
+        setPatternResult("Pattern mismatch — try again");
+        setPatternTaps([]);
+        lastTapRef.current = 0;
+        const attempts = recordFailedAttempt();
+        setFailedAttempts(attempts);
+      }
+    }
+  }, [patternTaps, storedPattern, patternMode, onUnlock]);
 
   useEffect(() => {
     if (security.trustedDeviceOnly && !isDeviceTrusted()) {
