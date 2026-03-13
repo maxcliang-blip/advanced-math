@@ -143,7 +143,7 @@ const Index = () => {
     };
   }, [state, profile.autoCloakMinutes, handlePanic]);
 
-  // Global keyboard handlers: panic key + boss key
+  // Global keyboard handlers: panic key + boss key + stealth mode
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       // Panic key
@@ -159,6 +159,18 @@ const Index = () => {
         e.preventDefault();
         setBossKeyActive((prev) => !prev);
       }
+      // Stealth mode hotkey
+      if (e.altKey && securitySettings.stealthModeEnabled && e.key.toLowerCase() === securitySettings.stealthModeKey && state === "unlocked") {
+        e.preventDefault();
+        handlePanic();
+        // Attempt to minimize/blur window
+        try {
+          window.blur();
+          // Try to open a blank window that immediately closes to lose focus
+          const w = window.open("about:blank", "_self");
+          if (w) w.close();
+        } catch { /* best effort */ }
+      }
       // Escape dismisses boss key
       if (e.key === "Escape" && bossKeyActive) {
         setBossKeyActive(false);
@@ -166,7 +178,7 @@ const Index = () => {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [state, profile.panicKey, bossKeyActive, handlePanic]);
+  }, [state, profile.panicKey, bossKeyActive, handlePanic, securitySettings.stealthModeEnabled, securitySettings.stealthModeKey]);
 
   // Render panic destination
   const renderPanic = () => {

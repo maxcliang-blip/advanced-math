@@ -191,6 +191,48 @@ const PasswordGate = ({ onUnlock, onDecoy }: PasswordGateProps) => {
             </Button>
           </form>
 
+          {patternEnabled && (
+            <div className="w-full space-y-3">
+              <div className="w-full h-px bg-border" />
+              {!patternMode ? (
+                <Button
+                  variant="outline"
+                  onClick={() => { setPatternMode(true); setPatternTaps([]); lastTapRef.current = 0; setPatternResult(""); }}
+                  className="w-full text-xs font-mono"
+                >
+                  <Fingerprint className="h-3 w-3 mr-2" />
+                  Unlock with Pattern
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-mono text-center">
+                    Tap the button with your rhythm ({patternTaps.length + 1}/{storedPattern!.length} taps)
+                  </p>
+                  <Button
+                    onClick={handlePatternTap}
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/80 glow-box font-display font-semibold"
+                  >
+                    TAP
+                  </Button>
+                  {patternResult && (
+                    <p className="text-destructive text-xs font-mono flex items-center gap-2">
+                      <AlertTriangle className="h-3 w-3" />
+                      {patternResult}
+                    </p>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setPatternMode(false); setPatternTaps([]); lastTapRef.current = 0; }}
+                    className="w-full text-xs font-mono text-muted-foreground"
+                  >
+                    Back to Password
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
           <p className="text-xs text-muted-foreground text-center">
             <span className="animate-blink">▋</span> secure access required
           </p>
