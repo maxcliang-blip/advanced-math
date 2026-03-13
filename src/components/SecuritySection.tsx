@@ -40,6 +40,53 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
   const [decoyInput, setDecoyInput] = useState(settings.decoyPassword);
   const [decoyEditing, setDecoyEditing] = useState(false);
   const [wipeConfirm, setWipeConfirm] = useState(false);
+  
+  // Keystroke pattern recording
+  const [patternRecording, setPatternRecording] = useState(false);
+  const [patternTaps, setPatternTaps] = useState<number[]>([]);
+  const lastTapRef = useRef<number>(0);
+  const [existingPattern, setExistingPattern] = useState<KeystrokePattern | null>(loadKeystrokePattern());
+  const [stealthKeyInput, setStealthKeyInput] = useState(settings.stealthModeKey || "h");
+  const [editingStealth, setEditingStealth] = useState(false);
+
+  const handlePatternTap = useCallback(() => {
+    const now = Date.now();
+    if (lastTapRef.current > 0) {
+      setPatternTaps(prev => [...prev, now - lastTapRef.current]);
+    }
+    lastTapRef.current = now;
+  }, []);
+
+  const savePattern = useCallback(() => {
+    if (patternTaps.length < 2) return;
+    const pattern: KeystrokePattern = { intervals: patternTaps, length: patternTaps.length + 1 };
+    saveKeystrokePattern(pattern);
+    setExistingPattern(pattern);
+    setPatternRecording(false);
+    setPatternTaps([]);
+    lastTapRef.current = 0;
+  }, [patternTaps]);
+
+  const cancelPatternRecording = useCallback(() => {
+    setPatternRecording(false);
+    setPatternTaps([]);
+    lastTapRef.current = 0;
+  }, []);
+
+  const handleClearPattern = useCallback(() => {
+    clearKeystrokePattern();
+    setExistingPattern(null);
+  }, []);
+
+  const handleSaveStealthKey = () => {
+    const key = stealthKeyInput.trim().toLowerCase();
+    if (!key) return;
+    const newSettings = { ...settings, stealthModeKey: key };
+    setSettings(newSettings);
+    saveSecuritySettings(newSettings);
+    onSecurityChange?.(newSettings);
+    setEditingStealth(false);
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
