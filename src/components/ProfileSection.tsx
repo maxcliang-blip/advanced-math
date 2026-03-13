@@ -1,14 +1,30 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Save, Timer } from "lucide-react";
-import { loadProfile, saveProfile, type UserProfile } from "@/lib/profile";
+import { User, Save, Timer, Zap, Monitor } from "lucide-react";
+import { loadProfile, saveProfile, type UserProfile, type PanicDestination, type BossKeyStyle } from "@/lib/profile";
 
 interface ProfileSectionProps {
   onProfileChange?: (profile: UserProfile) => void;
 }
 
 const disguiseOptions = ["Google", "Google Docs", "Canvas", "Wikipedia"];
+
+const PANIC_DESTINATIONS: { value: PanicDestination; label: string; desc: string }[] = [
+  { value: "404",     label: "Broken Page",   desc: "ERR_EMPTY_RESPONSE chrome error" },
+  { value: "google",  label: "Google",        desc: "Google homepage" },
+  { value: "youtube", label: "YouTube",       desc: "YouTube video page" },
+  { value: "docs",    label: "Google Docs",   desc: "Blank document" },
+  { value: "custom",  label: "Custom URL",    desc: "Any URL (opens in redirect)" },
+];
+
+const BOSS_KEY_STYLES: { value: BossKeyStyle; label: string }[] = [
+  { value: "google",  label: "Google" },
+  { value: "youtube", label: "YouTube" },
+  { value: "docs",    label: "Google Docs" },
+  { value: "404",     label: "Broken Page" },
+  { value: "custom",  label: "Custom URL" },
+];
 
 const ProfileSection = ({ onProfileChange }: ProfileSectionProps) => {
   const [profile, setProfile] = useState<UserProfile>(loadProfile);
@@ -48,6 +64,7 @@ const ProfileSection = ({ onProfileChange }: ProfileSectionProps) => {
             onChange={(e) => setProfile((p) => ({ ...p, displayName: e.target.value }))}
             className="bg-secondary border-border text-foreground focus:border-primary"
             placeholder="Agent"
+            data-testid="input-display-name"
           />
         </div>
 
@@ -73,6 +90,7 @@ const ProfileSection = ({ onProfileChange }: ProfileSectionProps) => {
         </div>
       </div>
 
+      {/* Panic key */}
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Panic Keybind</label>
         <div className="flex items-center gap-2">
@@ -88,17 +106,19 @@ const ProfileSection = ({ onProfileChange }: ProfileSectionProps) => {
                 ? "border-primary text-primary animate-pulse"
                 : "text-muted-foreground hover:text-foreground hover:border-primary"
             }`}
+            data-testid="button-record-panic-key"
           >
             {recordingKey ? "Press any key..." : "Change"}
           </Button>
         </div>
       </div>
 
+      {/* Auto-cloak timer */}
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground flex items-center gap-1">
           <Timer className="h-3 w-3" /> Auto-Cloak Timer
         </label>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {[0, 1, 2, 5, 10, 15].map((min) => (
             <Button
               key={min}
@@ -110,6 +130,7 @@ const ProfileSection = ({ onProfileChange }: ProfileSectionProps) => {
                   ? "text-xs font-mono bg-primary text-primary-foreground"
                   : "text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"
               }
+              data-testid={`auto-cloak-${min}`}
             >
               {min === 0 ? "Off" : `${min}m`}
             </Button>
@@ -122,6 +143,76 @@ const ProfileSection = ({ onProfileChange }: ProfileSectionProps) => {
         </p>
       </div>
 
+      {/* Panic destination */}
+      <div className="space-y-2">
+        <label className="text-xs text-muted-foreground flex items-center gap-1">
+          <Zap className="h-3 w-3" /> Panic Destination
+        </label>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {PANIC_DESTINATIONS.map((d) => (
+            <button
+              key={d.value}
+              onClick={() => setProfile((p) => ({ ...p, panicDestination: d.value }))}
+              className={`p-2 rounded-lg border text-left transition-colors ${
+                profile.panicDestination === d.value
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/50 hover:text-foreground"
+              }`}
+              data-testid={`panic-dest-${d.value}`}
+            >
+              <div className="text-xs font-mono font-medium">{d.label}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{d.desc}</div>
+            </button>
+          ))}
+        </div>
+        {profile.panicDestination === "custom" && (
+          <Input
+            value={profile.panicCustomUrl}
+            onChange={(e) => setProfile((p) => ({ ...p, panicCustomUrl: e.target.value }))}
+            placeholder="https://example.com"
+            className="bg-secondary border-border text-foreground focus:border-primary text-xs font-mono"
+            data-testid="input-panic-custom-url"
+          />
+        )}
+      </div>
+
+      {/* Boss Key style */}
+      <div className="space-y-2">
+        <label className="text-xs text-muted-foreground flex items-center gap-1">
+          <Monitor className="h-3 w-3" /> Boss Key Cover (Alt+B)
+        </label>
+        <p className="text-xs text-muted-foreground">
+          Instantly covers the screen with an innocent-looking page without losing your place. Double-click to dismiss.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {BOSS_KEY_STYLES.map((s) => (
+            <Button
+              key={s.value}
+              variant={profile.bossKeyStyle === s.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setProfile((p) => ({ ...p, bossKeyStyle: s.value }))}
+              className={
+                profile.bossKeyStyle === s.value
+                  ? "text-xs font-mono bg-primary text-primary-foreground"
+                  : "text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"
+              }
+              data-testid={`boss-key-${s.value}`}
+            >
+              {s.label}
+            </Button>
+          ))}
+        </div>
+        {profile.bossKeyStyle === "custom" && (
+          <Input
+            value={profile.bossKeyCustomUrl}
+            onChange={(e) => setProfile((p) => ({ ...p, bossKeyCustomUrl: e.target.value }))}
+            placeholder="https://example.com"
+            className="bg-secondary border-border text-foreground focus:border-primary text-xs font-mono"
+            data-testid="input-boss-key-url"
+          />
+        )}
+      </div>
+
       <Button
         onClick={handleSave}
         variant="outline"
@@ -131,6 +222,7 @@ const ProfileSection = ({ onProfileChange }: ProfileSectionProps) => {
             ? "border-primary text-primary"
             : "border-border text-muted-foreground hover:text-foreground hover:border-primary"
         }`}
+        data-testid="button-save-profile"
       >
         <Save className="h-3 w-3" />
         {saved ? "Saved!" : "Save Profile"}

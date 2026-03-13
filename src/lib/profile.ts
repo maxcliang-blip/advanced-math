@@ -1,8 +1,15 @@
+export type PanicDestination = "404" | "google" | "youtube" | "docs" | "custom";
+export type BossKeyStyle = "google" | "youtube" | "docs" | "404" | "custom";
+
 export interface UserProfile {
   displayName: string;
   defaultDisguise: string;
   panicKey: string;
-  autoCloakMinutes: number; // 0 = disabled
+  autoCloakMinutes: number;
+  panicDestination: PanicDestination;
+  panicCustomUrl: string;
+  bossKeyStyle: BossKeyStyle;
+  bossKeyCustomUrl: string;
 }
 
 const STORAGE_KEY = "cloak_profile";
@@ -12,6 +19,10 @@ const defaults: UserProfile = {
   defaultDisguise: "Google",
   panicKey: "~",
   autoCloakMinutes: 0,
+  panicDestination: "404",
+  panicCustomUrl: "",
+  bossKeyStyle: "google",
+  bossKeyCustomUrl: "",
 };
 
 export function loadProfile(): UserProfile {

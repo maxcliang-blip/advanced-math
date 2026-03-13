@@ -2,7 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import PasswordGate from "@/components/PasswordGate";
 import CloakDashboard from "@/components/CloakDashboard";
 import Fake404 from "@/components/Fake404";
-import { loadProfile } from "@/lib/profile";
+import FakeGoogle from "@/components/FakeGoogle";
+import FakeYouTube from "@/components/FakeYouTube";
+import FakeGoogleDocs from "@/components/FakeGoogleDocs";
+import BossKeyOverlay from "@/components/BossKeyOverlay";
+import { loadProfile, type UserProfile } from "@/lib/profile";
 import {
   loadSecuritySettings,
   type SecuritySettings,
@@ -20,22 +24,43 @@ type AppState = "gate" | "locked" | "unlocked" | "panic" | "decoy";
 
 const Index = () => {
   const [state, setState] = useState<AppState>("gate");
-  const [panicKey, setPanicKey] = useState(() => loadProfile().panicKey);
-  const [autoCloakMinutes, setAutoCloakMinutes] = useState(() => loadProfile().autoCloakMinutes);
+  const [profile, setProfile] = useState<UserProfile>(loadProfile);
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(loadSecuritySettings);
+  const [bossKeyActive, setBossKeyActive] = useState(false);
 
   const handlePanic = useCallback(() => {
+    const p = loadProfile();
     setState("panic");
-    document.title = "This page isn't working";
+
+    if (p.panicDestination === "custom" && p.panicCustomUrl) {
+      window.location.href = p.panicCustomUrl;
+      return;
+    }
+
+    // Update tab title/icon based on destination
+    const titles: Record<string, string> = {
+      "404": "This page isn't working",
+      google: "Google",
+      youtube: "YouTube",
+      docs: "Untitled document - Google Docs",
+    };
+    const icons: Record<string, string> = {
+      "404": "",
+      google: "https://www.google.com/favicon.ico",
+      youtube: "https://www.youtube.com/favicon.ico",
+      docs: "https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico",
+    };
+
+    document.title = titles[p.panicDestination] ?? "This page isn't working";
     const link =
       (document.querySelector("link[rel~='icon']") as HTMLLinkElement) ||
       document.createElement("link");
     link.rel = "icon";
-    link.href = "";
+    link.href = icons[p.panicDestination] ?? "";
     document.head.appendChild(link);
   }, []);
 
-  // Apply / remove security features whenever settings or state change
+  // Apply / remove security features based on state & settings
   useEffect(() => {
     if (state !== "unlocked") {
       disableDevToolsBlock();
@@ -45,29 +70,10 @@ const Index = () => {
       return;
     }
 
-    if (securitySettings.blockDevTools) {
-      enableDevToolsBlock();
-    } else {
-      disableDevToolsBlock();
-    }
-
-    if (securitySettings.disableRightClick) {
-      enableRightClickDisable();
-    } else {
-      disableRightClickDisable();
-    }
-
-    if (securitySettings.lockOnTabSwitch) {
-      enableTabVisibilityLock(() => setState("locked"));
-    } else {
-      disableTabVisibilityLock();
-    }
-
-    if (securitySettings.enablePanicOnDevTools) {
-      enablePanicOnDevToolsDetection(handlePanic);
-    } else {
-      disablePanicOnDevToolsDetection();
-    }
+    if (securitySettings.blockDevTools) enableDevToolsBlock(); else disableDevToolsBlock();
+    if (securitySettings.disableRightClick) enableRightClickDisable(); else disableRightClickDisable();
+    if (securitySettings.lockOnTabSwitch) enableTabVisibilityLock(() => setState("locked")); else disableTabVisibilityLock();
+    if (securitySettings.enablePanicOnDevTools) enablePanicOnDevToolsDetection(handlePanic); else disablePanicOnDevToolsDetection();
 
     return () => {
       disableDevToolsBlock();
@@ -79,41 +85,58 @@ const Index = () => {
 
   // Auto-cloak inactivity timer
   useEffect(() => {
-    if (state !== "unlocked" || autoCloakMinutes <= 0) return;
-
+    if (state !== "unlocked" || profile.autoCloakMinutes <= 0) return;
     let timer: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
       clearTimeout(timer);
-      timer = setTimeout(handlePanic, autoCloakMinutes * 60 * 1000);
+      timer = setTimeout(handlePanic, profile.autoCloakMinutes * 60 * 1000);
     };
-
     const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"];
     events.forEach((e) => window.addEventListener(e, resetTimer));
     resetTimer();
-
     return () => {
       clearTimeout(timer);
       events.forEach((e) => window.removeEventListener(e, resetTimer));
     };
-  }, [state, autoCloakMinutes, handlePanic]);
+  }, [state, profile.autoCloakMinutes, handlePanic]);
 
+  // Global keyboard handlers: panic key + boss key
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === panicKey || (panicKey === "~" && e.key === "`")) {
+      // Panic key
+      if (e.key === profile.panicKey || (profile.panicKey === "~" && e.key === "`")) {
         if (state === "unlocked") {
           handlePanic();
         } else if (state === "panic") {
           setState("gate");
         }
       }
+      // Boss key: Alt+B (toggle overlay)
+      if (e.altKey && e.key.toLowerCase() === "b" && state === "unlocked") {
+        e.preventDefault();
+        setBossKeyActive((prev) => !prev);
+      }
+      // Escape dismisses boss key
+      if (e.key === "Escape" && bossKeyActive) {
+        setBossKeyActive(false);
+      }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [state, handlePanic, panicKey]);
+  }, [state, profile.panicKey, bossKeyActive, handlePanic]);
 
-  if (state === "panic") return <Fake404 />;
-  if (state === "gate") return <Fake404 onReveal={() => setState("locked")} />;
-  if (state === "decoy") return (
+  // Render panic destination
+  const renderPanic = () => {
+    const dest = profile.panicDestination;
+    if (dest === "google")  return <FakeGoogle onReveal={() => setState("gate")} />;
+    if (dest === "youtube") return <FakeYouTube onReveal={() => setState("gate")} />;
+    if (dest === "docs")    return <FakeGoogleDocs onReveal={() => setState("gate")} />;
+    return <Fake404 onReveal={() => setState("gate")} />;
+  };
+
+  if (state === "panic") return renderPanic();
+  if (state === "gate")   return <Fake404 onReveal={() => setState("locked")} />;
+  if (state === "decoy")  return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <p className="text-muted-foreground text-sm font-mono">Nothing here.</p>
     </div>
@@ -124,16 +147,23 @@ const Index = () => {
       onDecoy={() => setState("decoy")}
     />
   );
+
   return (
-    <CloakDashboard
-      onPanic={handlePanic}
-      onLogout={() => setState("gate")}
-      onProfileChange={(p) => {
-        setPanicKey(p.panicKey);
-        setAutoCloakMinutes(p.autoCloakMinutes);
-      }}
-      onSecurityChange={(s) => setSecuritySettings(s)}
-    />
+    <>
+      <CloakDashboard
+        onPanic={handlePanic}
+        onLogout={() => setState("gate")}
+        onProfileChange={(p) => setProfile(p)}
+        onSecurityChange={(s) => setSecuritySettings(s)}
+      />
+      {bossKeyActive && (
+        <BossKeyOverlay
+          style={profile.bossKeyStyle}
+          customUrl={profile.bossKeyCustomUrl}
+          onDismiss={() => setBossKeyActive(false)}
+        />
+      )}
+    </>
   );
 };
 

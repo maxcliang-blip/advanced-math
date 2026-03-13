@@ -6,7 +6,8 @@ import ProfileSection from "@/components/ProfileSection";
 import SecuritySection from "@/components/SecuritySection";
 import { loadProfile, type UserProfile } from "@/lib/profile";
 import { themes, loadTheme, applyTheme } from "@/lib/themes";
-import { tabPresets, applyCloakPreset, loadActiveCloak, clearCloak, type TabPreset } from "@/lib/tabCloak";
+import { tabPresets, applyCloakPreset, loadActiveCloak, clearCloak, loadCustomPresets, addCustomPreset, removeCustomPreset, type TabPreset } from "@/lib/tabCloak";
+import PomodoroTimer from "@/components/PomodoroTimer";
 import {
   loadSecuritySettings,
   type SecuritySettings,
@@ -157,6 +158,14 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
   const [showConverter, setShowConverter] = useState(false);
   const [showSolver, setShowSolver] = useState(false);
   const [showGrapher, setShowGrapher] = useState(false);
+  const [showPomodoro, setShowPomodoro] = useState(false);
+
+  // Custom tab presets
+  const [customPresets, setCustomPresets] = useState<TabPreset[]>(loadCustomPresets);
+  const [showAddPreset, setShowAddPreset] = useState(false);
+  const [newPresetName, setNewPresetName] = useState("");
+  const [newPresetTitle, setNewPresetTitle] = useState("");
+  const [newPresetIcon, setNewPresetIcon] = useState("");
 
   // Draggable calculator
   const calcDrag = useDraggable({ initialX: typeof window !== "undefined" ? window.innerWidth - 280 : 600, initialY: typeof window !== "undefined" ? window.innerHeight - 500 : 300 });
@@ -356,6 +365,11 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
       if (e.altKey && e.key.toLowerCase() === "g") {
         e.preventDefault();
         setShowGrapher((prev) => !prev);
+      }
+      // Alt+M — toggle pomodoro timer
+      if (e.altKey && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        setShowPomodoro((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handleShortcut);
@@ -938,6 +952,72 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
           {activeCloak && (
             <p className="text-xs text-primary font-mono">Active: {activeCloak.title}</p>
           )}
+
+          {/* Custom presets */}
+          {customPresets.length > 0 && (
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Custom Presets</label>
+              <div className="flex flex-wrap gap-2">
+                {customPresets.map((p) => (
+                  <div key={p.name} className="flex items-center gap-0.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setTabTitle(p.title); setTabIcon(p.icon); applyCloakPreset(p); setActiveCloak(p); }}
+                      className={`text-xs font-mono border-border hover:border-primary hover:bg-secondary ${activeCloak?.name === p.name ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      {p.name}
+                    </Button>
+                    <button
+                      onClick={() => setCustomPresets(removeCustomPreset(p.name))}
+                      className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
+                      title="Remove"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add custom preset */}
+          {showAddPreset ? (
+            <div className="space-y-2 p-3 bg-secondary/40 rounded-lg border border-border">
+              <p className="text-xs font-mono text-muted-foreground">New Tab Preset</p>
+              <div className="grid grid-cols-1 gap-2">
+                <Input placeholder="Name (e.g. My School)" value={newPresetName} onChange={(e) => setNewPresetName(e.target.value)} className="bg-background border-border text-foreground text-xs h-7" />
+                <Input placeholder="Tab title text" value={newPresetTitle} onChange={(e) => setNewPresetTitle(e.target.value)} className="bg-background border-border text-foreground text-xs h-7" />
+                <Input placeholder="Favicon URL (optional)" value={newPresetIcon} onChange={(e) => setNewPresetIcon(e.target.value)} className="bg-background border-border text-foreground text-xs h-7" />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs font-mono border-primary text-primary hover:bg-primary/10 h-7"
+                  onClick={() => {
+                    if (!newPresetName.trim() || !newPresetTitle.trim()) return;
+                    setCustomPresets(addCustomPreset({ name: newPresetName.trim(), title: newPresetTitle.trim(), icon: newPresetIcon.trim() }));
+                    setNewPresetName(""); setNewPresetTitle(""); setNewPresetIcon("");
+                    setShowAddPreset(false);
+                  }}
+                >
+                  <Check className="h-3 w-3 mr-1" /> Save
+                </Button>
+                <Button size="sm" variant="ghost" className="text-xs font-mono text-muted-foreground h-7" onClick={() => setShowAddPreset(false)}>Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAddPreset(true)}
+              className="text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary gap-1"
+              data-testid="button-add-custom-preset"
+            >
+              <Plus className="h-3 w-3" /> Add Custom Preset
+            </Button>
+          )}
         </section>
 
         {/* Notes / Scratchpad */}
@@ -1051,6 +1131,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
               { label: "Converter", shortcut: "Alt+U", onClick: () => setShowConverter((p) => !p), active: showConverter },
               { label: "Equation Solver", shortcut: "Alt+E", onClick: () => setShowSolver((p) => !p), active: showSolver },
               { label: "Graph", shortcut: "Alt+G", onClick: () => setShowGrapher((p) => !p), active: showGrapher },
+              { label: "Pomodoro", shortcut: "Alt+M", onClick: () => setShowPomodoro((p) => !p), active: showPomodoro },
             ].map(({ label, shortcut, onClick, active }) => (
               <Button
                 key={label}
@@ -1347,6 +1428,8 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
                 ["Alt + U", "Toggle unit converter"],
                 ["Alt + E", "Toggle equation solver"],
                 ["Alt + G", "Toggle graphing calculator"],
+                ["Alt + M", "Toggle Pomodoro timer"],
+                ["Alt + B", "Boss Key (cover screen)"],
                 [profile.panicKey === " " ? "Space" : profile.panicKey, "Panic key (global)"],
               ].map(([key, desc]) => (
                 <div key={key} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
@@ -1483,6 +1566,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
 
       {/* Graphing Calculator */}
       {showGrapher && <GraphingCalculator onClose={() => setShowGrapher(false)} />}
+      {showPomodoro && <PomodoroTimer onClose={() => setShowPomodoro(false)} />}
 
       <footer className="border-t border-border px-6 py-3 text-center">
         <p className="text-xs text-muted-foreground font-mono">
