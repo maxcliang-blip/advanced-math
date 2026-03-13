@@ -46,7 +46,7 @@ const Index = () => {
     const p = loadProfile();
     const s = loadSecuritySettings();
     setState("panic");
-
+    addAuditEntry("panic", "Panic triggered");
     // Wipe clipboard on panic
     wipeClipboard();
 
