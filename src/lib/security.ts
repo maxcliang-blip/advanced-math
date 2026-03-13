@@ -465,6 +465,41 @@ export function matchKeystrokePattern(
   return true;
 }
 
+// --- Audit Log ---
+
+const AUDIT_LOG_KEY = "cloak_audit_log";
+const MAX_AUDIT_ENTRIES = 100;
+
+export type AuditEventType = 
+  | "unlock" | "lock" | "panic" | "failed_attempt" 
+  | "decoy_used" | "emergency_wipe" | "session_timeout"
+  | "stealth_triggered" | "pattern_unlock" | "pattern_fail"
+  | "devtools_detected" | "tab_switch_lock" | "mouse_leave_lock" | "window_blur_lock";
+
+export interface AuditEntry {
+  type: AuditEventType;
+  timestamp: number;
+  detail?: string;
+}
+
+export function getAuditLog(): AuditEntry[] {
+  try {
+    return JSON.parse(localStorage.getItem(AUDIT_LOG_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+export function addAuditEntry(type: AuditEventType, detail?: string) {
+  const log = getAuditLog();
+  log.unshift({ type, timestamp: Date.now(), detail });
+  localStorage.setItem(AUDIT_LOG_KEY, JSON.stringify(log.slice(0, MAX_AUDIT_ENTRIES)));
+}
+
+export function clearAuditLog() {
+  localStorage.removeItem(AUDIT_LOG_KEY);
+}
+
 export function emergencyWipe() {
   const keysToKeep: string[] = [];
   const preserve: Record<string, string> = {};

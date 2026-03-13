@@ -199,8 +199,8 @@ const Index = () => {
   );
   if (state === "locked") return (
     <PasswordGate
-      onUnlock={() => setState("unlocked")}
-      onDecoy={() => setState("decoy")}
+      onUnlock={() => { addAuditEntry("unlock", "Password or pattern unlock"); setState("unlocked"); }}
+      onDecoy={() => { addAuditEntry("decoy_used"); setState("decoy"); }}
     />
   );
 
