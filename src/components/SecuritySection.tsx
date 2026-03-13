@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import {
   Shield, Eye, EyeOff, Lock, Smartphone, Clock,
   TriangleAlert as AlertTriangle, Activity, Ban,
-  MousePointerClick, TabletSmartphone, Bomb, Trash2, KeyRound
+  MousePointerClick, TabletSmartphone, Bomb, Trash2, KeyRound,
+  LogOut, BluetoothOff, Printer, Type, Frame, History
 } from "lucide-react";
 import {
   loadSecuritySettings,
@@ -304,6 +305,48 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
           label="Panic on DevTools Detection"
           description="Triggers panic mode if browser DevTools are opened"
           settingKey="enablePanicOnDevTools"
+        />
+
+        <ToggleRow
+          icon={<LogOut className="h-4 w-4 text-primary" />}
+          label="Mouse Leave Lock"
+          description="Auto-locks when your cursor exits the browser window (address bar, alt-tab)"
+          settingKey="mouseLeaveLock"
+        />
+
+        <ToggleRow
+          icon={<BluetoothOff className="h-4 w-4 text-primary" />}
+          label="Window Blur Lock"
+          description="Locks the dashboard if the browser window loses focus"
+          settingKey="windowBlurLock"
+        />
+
+        <ToggleRow
+          icon={<Printer className="h-4 w-4 text-primary" />}
+          label="Disable Printing"
+          description="Blocks Ctrl+P and hides content from print dialogs"
+          settingKey="disablePrinting"
+        />
+
+        <ToggleRow
+          icon={<Type className="h-4 w-4 text-primary" />}
+          label="Disable Text Selection"
+          description="Prevents highlighting or selecting any text on the page"
+          settingKey="disableTextSelection"
+        />
+
+        <ToggleRow
+          icon={<Frame className="h-4 w-4 text-primary" />}
+          label="Anti-Framing (Iframe Detection)"
+          description="Triggers panic if CLOAK is embedded inside another page (clickjacking)"
+          settingKey="iframeDetection"
+        />
+
+        <ToggleRow
+          icon={<History className="h-4 w-4 text-primary" />}
+          label="History Scramble on Panic"
+          description="Pushes fake history entries on panic so the back button can't reveal CLOAK"
+          settingKey="historyScramble"
         />
 
         {/* Decoy Password */}

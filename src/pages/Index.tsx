@@ -18,6 +18,19 @@ import {
   disableTabVisibilityLock,
   enablePanicOnDevToolsDetection,
   disablePanicOnDevToolsDetection,
+  enableMouseLeaveLock,
+  disableMouseLeaveLock,
+  cancelMouseLeaveLock,
+  enableWindowBlurLock,
+  disableWindowBlurLock,
+  enablePrintDisable,
+  disablePrintDisable,
+  enableTextSelectionDisable,
+  disableTextSelectionDisable,
+  enableIframeDetection,
+  disableIframeDetection,
+  scrambleHistory,
+  wipeClipboard,
 } from "@/lib/security";
 
 type AppState = "gate" | "locked" | "unlocked" | "panic" | "decoy";
@@ -30,7 +43,14 @@ const Index = () => {
 
   const handlePanic = useCallback(() => {
     const p = loadProfile();
+    const s = loadSecuritySettings();
     setState("panic");
+
+    // Wipe clipboard on panic
+    wipeClipboard();
+
+    // Scramble history so back-button doesn't expose CLOAK
+    if (s.historyScramble) scrambleHistory();
 
     if (p.panicDestination === "custom" && p.panicCustomUrl) {
       window.location.href = p.panicCustomUrl;
@@ -67,21 +87,44 @@ const Index = () => {
       disableRightClickDisable();
       disableTabVisibilityLock();
       disablePanicOnDevToolsDetection();
+      disableMouseLeaveLock();
+      disableWindowBlurLock();
+      disablePrintDisable();
+      disableTextSelectionDisable();
+      disableIframeDetection();
       return;
     }
 
-    if (securitySettings.blockDevTools) enableDevToolsBlock(); else disableDevToolsBlock();
-    if (securitySettings.disableRightClick) enableRightClickDisable(); else disableRightClickDisable();
-    if (securitySettings.lockOnTabSwitch) enableTabVisibilityLock(() => setState("locked")); else disableTabVisibilityLock();
+    if (securitySettings.blockDevTools)        enableDevToolsBlock();        else disableDevToolsBlock();
+    if (securitySettings.disableRightClick)    enableRightClickDisable();    else disableRightClickDisable();
+    if (securitySettings.lockOnTabSwitch)      enableTabVisibilityLock(() => setState("locked")); else disableTabVisibilityLock();
     if (securitySettings.enablePanicOnDevTools) enablePanicOnDevToolsDetection(handlePanic); else disablePanicOnDevToolsDetection();
+    if (securitySettings.mouseLeaveLock)       enableMouseLeaveLock(() => setState("locked")); else disableMouseLeaveLock();
+    if (securitySettings.windowBlurLock)       enableWindowBlurLock(() => setState("locked")); else disableWindowBlurLock();
+    if (securitySettings.disablePrinting)      enablePrintDisable();         else disablePrintDisable();
+    if (securitySettings.disableTextSelection) enableTextSelectionDisable(); else disableTextSelectionDisable();
+    if (securitySettings.iframeDetection)      enableIframeDetection(handlePanic); else disableIframeDetection();
 
     return () => {
       disableDevToolsBlock();
       disableRightClickDisable();
       disableTabVisibilityLock();
       disablePanicOnDevToolsDetection();
+      disableMouseLeaveLock();
+      disableWindowBlurLock();
+      disablePrintDisable();
+      disableTextSelectionDisable();
+      disableIframeDetection();
     };
   }, [state, securitySettings, handlePanic]);
+
+  // Cancel mouse-leave lock timer when mouse re-enters
+  useEffect(() => {
+    if (state !== "unlocked" || !securitySettings.mouseLeaveLock) return;
+    const cancel = () => cancelMouseLeaveLock();
+    document.addEventListener("mouseenter", cancel);
+    return () => document.removeEventListener("mouseenter", cancel);
+  }, [state, securitySettings.mouseLeaveLock]);
 
   // Auto-cloak inactivity timer
   useEffect(() => {

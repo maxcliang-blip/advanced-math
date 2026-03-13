@@ -11,6 +11,13 @@ export interface SecuritySettings {
   lockOnTabSwitch: boolean;
   enablePanicOnDevTools: boolean;
   decoyPassword: string;
+  // New features
+  mouseLeaveLock: boolean;
+  windowBlurLock: boolean;
+  disablePrinting: boolean;
+  disableTextSelection: boolean;
+  iframeDetection: boolean;
+  historyScramble: boolean;
 }
 
 const SECURITY_KEY = "cloak_security_settings";
@@ -31,6 +38,12 @@ const defaults: SecuritySettings = {
   lockOnTabSwitch: false,
   enablePanicOnDevTools: false,
   decoyPassword: "",
+  mouseLeaveLock: false,
+  windowBlurLock: false,
+  disablePrinting: false,
+  disableTextSelection: false,
+  iframeDetection: false,
+  historyScramble: false,
 };
 
 export function loadSecuritySettings(): SecuritySettings {
@@ -148,7 +161,7 @@ export function unlockMode() {
   document.body.style.pointerEvents = "auto";
 }
 
-// --- New security features ---
+// --- DevTools block ---
 
 let devToolsHandler: ((e: KeyboardEvent) => void) | null = null;
 
@@ -156,8 +169,9 @@ export function enableDevToolsBlock() {
   devToolsHandler = (e: KeyboardEvent) => {
     const blocked =
       e.key === "F12" ||
-      (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "i" || e.key === "J" || e.key === "j" || e.key === "C" || e.key === "c")) ||
-      (e.ctrlKey && (e.key === "U" || e.key === "u"));
+      (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "i" || e.key === "J" || e.key === "j" || e.key === "C" || e.key === "c" || e.key === "K" || e.key === "k")) ||
+      (e.ctrlKey && (e.key === "U" || e.key === "u")) ||
+      (e.metaKey && e.altKey && (e.key === "I" || e.key === "i" || e.key === "J" || e.key === "j" || e.key === "C" || e.key === "c"));
     if (blocked) {
       e.preventDefault();
       e.stopPropagation();
@@ -173,6 +187,8 @@ export function disableDevToolsBlock() {
   }
 }
 
+// --- Right-click disable ---
+
 let contextMenuHandler: ((e: MouseEvent) => void) | null = null;
 
 export function enableRightClickDisable() {
@@ -187,13 +203,13 @@ export function disableRightClickDisable() {
   }
 }
 
+// --- Tab visibility lock ---
+
 let visibilityHandler: (() => void) | null = null;
 
 export function enableTabVisibilityLock(onLock: () => void) {
   visibilityHandler = () => {
-    if (document.hidden) {
-      onLock();
-    }
+    if (document.hidden) onLock();
   };
   document.addEventListener("visibilitychange", visibilityHandler);
 }
@@ -205,6 +221,8 @@ export function disableTabVisibilityLock() {
   }
 }
 
+// --- DevTools detection (window-size polling) ---
+
 let devToolsDetectionInterval: ReturnType<typeof setInterval> | null = null;
 
 export function enablePanicOnDevToolsDetection(onPanic: () => void) {
@@ -212,9 +230,7 @@ export function enablePanicOnDevToolsDetection(onPanic: () => void) {
     const threshold = 160;
     const widthDiff = window.outerWidth - window.innerWidth > threshold;
     const heightDiff = window.outerHeight - window.innerHeight > threshold;
-    if (widthDiff || heightDiff) {
-      onPanic();
-    }
+    if (widthDiff || heightDiff) onPanic();
   }, 1000);
 }
 
@@ -225,6 +241,168 @@ export function disablePanicOnDevToolsDetection() {
   }
 }
 
+// --- Mouse leave lock ---
+
+let mouseleaveHandler: ((e: MouseEvent) => void) | null = null;
+let mouseleaveDelay: ReturnType<typeof setTimeout> | null = null;
+
+export function enableMouseLeaveLock(onLock: () => void) {
+  mouseleaveHandler = (e: MouseEvent) => {
+    // Only trigger when mouse leaves out of the top of the window (address bar area)
+    // or the sides — clientY < 0 means header chrome, relatedTarget null = truly outside window
+    if (e.clientY <= 0 || e.clientX <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+      mouseleaveDelay = setTimeout(onLock, 600);
+    }
+  };
+  document.addEventListener("mouseleave", mouseleaveHandler);
+}
+
+export function disableMouseLeaveLock() {
+  if (mouseleaveHandler) {
+    document.removeEventListener("mouseleave", mouseleaveHandler);
+    mouseleaveHandler = null;
+  }
+  if (mouseleaveDelay) {
+    clearTimeout(mouseleaveDelay);
+    mouseleaveDelay = null;
+  }
+}
+
+// Cancel mouse-leave lock if mouse returns quickly
+export function cancelMouseLeaveLock() {
+  if (mouseleaveDelay) {
+    clearTimeout(mouseleaveDelay);
+    mouseleaveDelay = null;
+  }
+}
+
+// --- Window blur lock ---
+
+let windowBlurHandler: (() => void) | null = null;
+let windowBlurDelay: ReturnType<typeof setTimeout> | null = null;
+
+export function enableWindowBlurLock(onLock: () => void) {
+  windowBlurHandler = () => {
+    windowBlurDelay = setTimeout(onLock, 800);
+  };
+  const cancelBlur = () => {
+    if (windowBlurDelay) { clearTimeout(windowBlurDelay); windowBlurDelay = null; }
+  };
+  window.addEventListener("blur", windowBlurHandler);
+  window.addEventListener("focus", cancelBlur);
+}
+
+export function disableWindowBlurLock() {
+  if (windowBlurHandler) {
+    window.removeEventListener("blur", windowBlurHandler);
+    windowBlurHandler = null;
+  }
+  if (windowBlurDelay) {
+    clearTimeout(windowBlurDelay);
+    windowBlurDelay = null;
+  }
+}
+
+// --- Print disable ---
+
+let printHandler: ((e: KeyboardEvent) => void) | null = null;
+let printStyleEl: HTMLStyleElement | null = null;
+
+export function enablePrintDisable() {
+  printHandler = (e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "p" || e.key === "P")) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+  document.addEventListener("keydown", printHandler, true);
+
+  printStyleEl = document.createElement("style");
+  printStyleEl.id = "cloak-print-block";
+  printStyleEl.textContent = `@media print { body { visibility: hidden !important; } }`;
+  document.head.appendChild(printStyleEl);
+
+  window.addEventListener("beforeprint", preventPrint);
+}
+
+function preventPrint(e: Event) {
+  e.preventDefault();
+}
+
+export function disablePrintDisable() {
+  if (printHandler) {
+    document.removeEventListener("keydown", printHandler, true);
+    printHandler = null;
+  }
+  if (printStyleEl) {
+    printStyleEl.remove();
+    printStyleEl = null;
+  }
+  window.removeEventListener("beforeprint", preventPrint);
+}
+
+// --- Text selection disable ---
+
+let selectionStyleEl: HTMLStyleElement | null = null;
+
+export function enableTextSelectionDisable() {
+  selectionStyleEl = document.createElement("style");
+  selectionStyleEl.id = "cloak-no-select";
+  selectionStyleEl.textContent = `* { user-select: none !important; -webkit-user-select: none !important; }`;
+  document.head.appendChild(selectionStyleEl);
+}
+
+export function disableTextSelectionDisable() {
+  if (selectionStyleEl) {
+    selectionStyleEl.remove();
+    selectionStyleEl = null;
+  }
+}
+
+// --- Iframe embed detection ---
+
+let iframeCheckInterval: ReturnType<typeof setInterval> | null = null;
+
+export function enableIframeDetection(onPanic: () => void) {
+  const check = () => {
+    try {
+      if (window.self !== window.top) {
+        onPanic();
+      }
+    } catch {
+      // Cross-origin access throws, which itself confirms we're in an iframe
+      onPanic();
+    }
+  };
+  check();
+  iframeCheckInterval = setInterval(check, 3000);
+}
+
+export function disableIframeDetection() {
+  if (iframeCheckInterval) {
+    clearInterval(iframeCheckInterval);
+    iframeCheckInterval = null;
+  }
+}
+
+// --- History scramble (call on panic) ---
+
+export function scrambleHistory(steps = 8) {
+  for (let i = 0; i < steps; i++) {
+    history.pushState(null, "", `/?ref=${Math.random().toString(36).slice(2)}`);
+  }
+}
+
+// --- Clipboard wipe (call on panic) ---
+
+export function wipeClipboard() {
+  try {
+    navigator.clipboard.writeText("").catch(() => {});
+  } catch { /* best-effort */ }
+}
+
+// --- Decoy password ---
+
 export function isDecoyPassword(input: string): boolean {
   const settings = loadSecuritySettings();
   return (
@@ -232,6 +410,8 @@ export function isDecoyPassword(input: string): boolean {
     input === settings.decoyPassword
   );
 }
+
+// --- Emergency wipe ---
 
 export function emergencyWipe() {
   const keysToKeep: string[] = [];
