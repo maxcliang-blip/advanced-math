@@ -6,7 +6,7 @@ import {
   TriangleAlert as AlertTriangle, Activity, Ban,
   MousePointerClick, TabletSmartphone, Bomb, Trash2, KeyRound,
   LogOut, BluetoothOff, Printer, Type, Frame, History,
-  Fingerprint, Ghost
+  Fingerprint, Ghost, ScrollText
 } from "lucide-react";
 import {
   loadSecuritySettings,
