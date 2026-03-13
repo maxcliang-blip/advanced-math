@@ -12,6 +12,7 @@ import {
   isDecoyPassword,
   loadKeystrokePattern,
   matchKeystrokePattern,
+  addAuditEntry,
 } from "@/lib/security";
 
 interface PasswordGateProps {
