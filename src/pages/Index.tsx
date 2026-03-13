@@ -98,7 +98,7 @@ const Index = () => {
 
     if (securitySettings.blockDevTools)        enableDevToolsBlock();        else disableDevToolsBlock();
     if (securitySettings.disableRightClick)    enableRightClickDisable();    else disableRightClickDisable();
-    if (securitySettings.lockOnTabSwitch)      enableTabVisibilityLock(() => setState("locked")); else disableTabVisibilityLock();
+    if (securitySettings.lockOnTabSwitch)      enableTabVisibilityLock(() => { addAuditEntry("tab_switch_lock"); setState("locked"); }); else disableTabVisibilityLock();
     if (securitySettings.enablePanicOnDevTools) enablePanicOnDevToolsDetection(handlePanic); else disablePanicOnDevToolsDetection();
     if (securitySettings.mouseLeaveLock)       enableMouseLeaveLock(() => setState("locked")); else disableMouseLeaveLock();
     if (securitySettings.windowBlurLock)       enableWindowBlurLock(() => setState("locked")); else disableWindowBlurLock();
