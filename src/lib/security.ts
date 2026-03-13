@@ -18,6 +18,9 @@ export interface SecuritySettings {
   disableTextSelection: boolean;
   iframeDetection: boolean;
   historyScramble: boolean;
+  keystrokePatternLock: boolean;
+  stealthModeEnabled: boolean;
+  stealthModeKey: string;
 }
 
 const SECURITY_KEY = "cloak_security_settings";
@@ -44,6 +47,9 @@ const defaults: SecuritySettings = {
   disableTextSelection: false,
   iframeDetection: false,
   historyScramble: false,
+  keystrokePatternLock: false,
+  stealthModeEnabled: false,
+  stealthModeKey: "h",
 };
 
 export function loadSecuritySettings(): SecuritySettings {
@@ -412,6 +418,52 @@ export function isDecoyPassword(input: string): boolean {
 }
 
 // --- Emergency wipe ---
+
+// --- Keystroke Pattern Lock ---
+
+const PATTERN_KEY = "cloak_keystroke_pattern";
+const PATTERN_TOLERANCE = 0.35; // 35% timing tolerance
+
+export interface KeystrokePattern {
+  intervals: number[]; // ms between taps
+  length: number;
+}
+
+export function saveKeystrokePattern(pattern: KeystrokePattern) {
+  localStorage.setItem(PATTERN_KEY, JSON.stringify(pattern));
+}
+
+export function loadKeystrokePattern(): KeystrokePattern | null {
+  try {
+    const stored = localStorage.getItem(PATTERN_KEY);
+    if (!stored) return null;
+    return JSON.parse(stored);
+  } catch {
+    return null;
+  }
+}
+
+export function clearKeystrokePattern() {
+  localStorage.removeItem(PATTERN_KEY);
+}
+
+export function matchKeystrokePattern(
+  recorded: KeystrokePattern,
+  attempt: number[]
+): boolean {
+  if (attempt.length !== recorded.intervals.length) return false;
+  // Normalize both patterns relative to their average interval
+  const avgRecorded = recorded.intervals.reduce((a, b) => a + b, 0) / recorded.intervals.length;
+  const avgAttempt = attempt.reduce((a, b) => a + b, 0) / attempt.length;
+  if (avgRecorded === 0 || avgAttempt === 0) return false;
+
+  for (let i = 0; i < recorded.intervals.length; i++) {
+    const ratioRecorded = recorded.intervals[i] / avgRecorded;
+    const ratioAttempt = attempt[i] / avgAttempt;
+    if (Math.abs(ratioRecorded - ratioAttempt) > PATTERN_TOLERANCE) return false;
+  }
+  return true;
+}
 
 export function emergencyWipe() {
   const keysToKeep: string[] = [];

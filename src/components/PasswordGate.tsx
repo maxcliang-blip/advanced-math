@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Lock, TriangleAlert as AlertTriangle, Shield } from "lucide-react";
+import { Lock, TriangleAlert as AlertTriangle, Shield, Fingerprint } from "lucide-react";
 import {
   recordFailedAttempt,
   clearFailedAttempts,
@@ -10,6 +10,8 @@ import {
   setTrustedDevice,
   loadSecuritySettings,
   isDecoyPassword,
+  loadKeystrokePattern,
+  matchKeystrokePattern,
 } from "@/lib/security";
 
 interface PasswordGateProps {
@@ -27,6 +29,46 @@ const PasswordGate = ({ onUnlock, onDecoy }: PasswordGateProps) => {
   const [countdown, setCountdown] = useState(0);
   const [failedAttempts, setFailedAttempts] = useState(getFailedAttempts());
   const security = loadSecuritySettings();
+  
+  // Keystroke pattern state
+  const storedPattern = loadKeystrokePattern();
+  const patternEnabled = security.keystrokePatternLock && storedPattern;
+  const [patternMode, setPatternMode] = useState(false);
+  const [patternTaps, setPatternTaps] = useState<number[]>([]);
+  const lastTapRef = useRef<number>(0);
+  const [patternResult, setPatternResult] = useState<string>("");
+
+  const handlePatternTap = useCallback(() => {
+    const now = Date.now();
+    if (lastTapRef.current > 0) {
+      setPatternTaps(prev => [...prev, now - lastTapRef.current]);
+    }
+    lastTapRef.current = now;
+    
+    // Check if we have enough taps
+    if (storedPattern && patternTaps.length + 1 >= storedPattern.intervals.length) {
+      const attempt = [...patternTaps, now - lastTapRef.current].slice(0, storedPattern.intervals.length);
+      // Need to wait for state update, so check on next tap
+    }
+  }, [patternTaps, storedPattern]);
+
+  // Check pattern match when taps reach required length
+  useEffect(() => {
+    if (!storedPattern || !patternMode) return;
+    if (patternTaps.length === storedPattern.intervals.length) {
+      if (matchKeystrokePattern(storedPattern, patternTaps)) {
+        clearFailedAttempts();
+        setPatternResult("");
+        onUnlock();
+      } else {
+        setPatternResult("Pattern mismatch — try again");
+        setPatternTaps([]);
+        lastTapRef.current = 0;
+        const attempts = recordFailedAttempt();
+        setFailedAttempts(attempts);
+      }
+    }
+  }, [patternTaps, storedPattern, patternMode, onUnlock]);
 
   useEffect(() => {
     if (security.trustedDeviceOnly && !isDeviceTrusted()) {
@@ -148,6 +190,48 @@ const PasswordGate = ({ onUnlock, onDecoy }: PasswordGateProps) => {
               {locked && countdown > 0 ? `LOCKED (${countdown}s)` : "UNLOCK"}
             </Button>
           </form>
+
+          {patternEnabled && (
+            <div className="w-full space-y-3">
+              <div className="w-full h-px bg-border" />
+              {!patternMode ? (
+                <Button
+                  variant="outline"
+                  onClick={() => { setPatternMode(true); setPatternTaps([]); lastTapRef.current = 0; setPatternResult(""); }}
+                  className="w-full text-xs font-mono"
+                >
+                  <Fingerprint className="h-3 w-3 mr-2" />
+                  Unlock with Pattern
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-mono text-center">
+                    Tap the button with your rhythm ({patternTaps.length + 1}/{storedPattern!.length} taps)
+                  </p>
+                  <Button
+                    onClick={handlePatternTap}
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/80 glow-box font-display font-semibold"
+                  >
+                    TAP
+                  </Button>
+                  {patternResult && (
+                    <p className="text-destructive text-xs font-mono flex items-center gap-2">
+                      <AlertTriangle className="h-3 w-3" />
+                      {patternResult}
+                    </p>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setPatternMode(false); setPatternTaps([]); lastTapRef.current = 0; }}
+                    className="w-full text-xs font-mono text-muted-foreground"
+                  >
+                    Back to Password
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           <p className="text-xs text-muted-foreground text-center">
             <span className="animate-blink">▋</span> secure access required
