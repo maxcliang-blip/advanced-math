@@ -20,6 +20,10 @@ import {
   getSessionDuration,
   detectSuspiciousActivity,
   emergencyWipe,
+  loadKeystrokePattern,
+  saveKeystrokePattern,
+  clearKeystrokePattern,
+  type KeystrokePattern,
 } from "@/lib/security";
 
 interface SecuritySectionProps {
