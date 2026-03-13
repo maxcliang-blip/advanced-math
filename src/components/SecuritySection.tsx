@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Shield, Eye, EyeOff, Lock, Smartphone, Clock,
   TriangleAlert as AlertTriangle, Activity, Ban,
   MousePointerClick, TabletSmartphone, Bomb, Trash2, KeyRound,
-  LogOut, BluetoothOff, Printer, Type, Frame, History
+  LogOut, BluetoothOff, Printer, Type, Frame, History,
+  Fingerprint, Ghost
 } from "lucide-react";
 import {
   loadSecuritySettings,
