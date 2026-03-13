@@ -100,8 +100,8 @@ const Index = () => {
     if (securitySettings.disableRightClick)    enableRightClickDisable();    else disableRightClickDisable();
     if (securitySettings.lockOnTabSwitch)      enableTabVisibilityLock(() => { addAuditEntry("tab_switch_lock"); setState("locked"); }); else disableTabVisibilityLock();
     if (securitySettings.enablePanicOnDevTools) enablePanicOnDevToolsDetection(() => { addAuditEntry("devtools_detected"); handlePanic(); }); else disablePanicOnDevToolsDetection();
-    if (securitySettings.mouseLeaveLock)       enableMouseLeaveLock(() => setState("locked")); else disableMouseLeaveLock();
-    if (securitySettings.windowBlurLock)       enableWindowBlurLock(() => setState("locked")); else disableWindowBlurLock();
+    if (securitySettings.mouseLeaveLock)       enableMouseLeaveLock(() => { addAuditEntry("mouse_leave_lock"); setState("locked"); }); else disableMouseLeaveLock();
+    if (securitySettings.windowBlurLock)       enableWindowBlurLock(() => { addAuditEntry("window_blur_lock"); setState("locked"); }); else disableWindowBlurLock();
     if (securitySettings.disablePrinting)      enablePrintDisable();         else disablePrintDisable();
     if (securitySettings.disableTextSelection) enableTextSelectionDisable(); else disableTextSelectionDisable();
     if (securitySettings.iframeDetection)      enableIframeDetection(handlePanic); else disableIframeDetection();
