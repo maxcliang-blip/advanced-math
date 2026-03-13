@@ -592,6 +592,9 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
           )}
         </div>
 
+        {/* Security Audit Log */}
+        <AuditLogSection />
+
         {/* Emergency Data Wipe */}
         <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/5">
           <div className="flex items-center gap-2 mb-1">
