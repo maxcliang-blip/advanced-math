@@ -163,6 +163,7 @@ const Index = () => {
       // Stealth mode hotkey
       if (e.altKey && securitySettings.stealthModeEnabled && e.key.toLowerCase() === securitySettings.stealthModeKey && state === "unlocked") {
         e.preventDefault();
+        addAuditEntry("stealth_triggered");
         handlePanic();
         // Attempt to minimize/blur window
         try {
