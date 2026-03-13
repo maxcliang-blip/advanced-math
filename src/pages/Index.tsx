@@ -31,6 +31,7 @@ import {
   disableIframeDetection,
   scrambleHistory,
   wipeClipboard,
+  addAuditEntry,
 } from "@/lib/security";
 
 type AppState = "gate" | "locked" | "unlocked" | "panic" | "decoy";
@@ -45,7 +46,7 @@ const Index = () => {
     const p = loadProfile();
     const s = loadSecuritySettings();
     setState("panic");
-
+    addAuditEntry("panic", "Panic triggered");
     // Wipe clipboard on panic
     wipeClipboard();
 
@@ -97,10 +98,10 @@ const Index = () => {
 
     if (securitySettings.blockDevTools)        enableDevToolsBlock();        else disableDevToolsBlock();
     if (securitySettings.disableRightClick)    enableRightClickDisable();    else disableRightClickDisable();
-    if (securitySettings.lockOnTabSwitch)      enableTabVisibilityLock(() => setState("locked")); else disableTabVisibilityLock();
-    if (securitySettings.enablePanicOnDevTools) enablePanicOnDevToolsDetection(handlePanic); else disablePanicOnDevToolsDetection();
-    if (securitySettings.mouseLeaveLock)       enableMouseLeaveLock(() => setState("locked")); else disableMouseLeaveLock();
-    if (securitySettings.windowBlurLock)       enableWindowBlurLock(() => setState("locked")); else disableWindowBlurLock();
+    if (securitySettings.lockOnTabSwitch)      enableTabVisibilityLock(() => { addAuditEntry("tab_switch_lock"); setState("locked"); }); else disableTabVisibilityLock();
+    if (securitySettings.enablePanicOnDevTools) enablePanicOnDevToolsDetection(() => { addAuditEntry("devtools_detected"); handlePanic(); }); else disablePanicOnDevToolsDetection();
+    if (securitySettings.mouseLeaveLock)       enableMouseLeaveLock(() => { addAuditEntry("mouse_leave_lock"); setState("locked"); }); else disableMouseLeaveLock();
+    if (securitySettings.windowBlurLock)       enableWindowBlurLock(() => { addAuditEntry("window_blur_lock"); setState("locked"); }); else disableWindowBlurLock();
     if (securitySettings.disablePrinting)      enablePrintDisable();         else disablePrintDisable();
     if (securitySettings.disableTextSelection) enableTextSelectionDisable(); else disableTextSelectionDisable();
     if (securitySettings.iframeDetection)      enableIframeDetection(handlePanic); else disableIframeDetection();
@@ -162,6 +163,7 @@ const Index = () => {
       // Stealth mode hotkey
       if (e.altKey && securitySettings.stealthModeEnabled && e.key.toLowerCase() === securitySettings.stealthModeKey && state === "unlocked") {
         e.preventDefault();
+        addAuditEntry("stealth_triggered");
         handlePanic();
         // Attempt to minimize/blur window
         try {
@@ -198,8 +200,8 @@ const Index = () => {
   );
   if (state === "locked") return (
     <PasswordGate
-      onUnlock={() => setState("unlocked")}
-      onDecoy={() => setState("decoy")}
+      onUnlock={() => { addAuditEntry("unlock", "Password or pattern unlock"); setState("unlocked"); }}
+      onDecoy={() => { addAuditEntry("decoy_used"); setState("decoy"); }}
     />
   );
 

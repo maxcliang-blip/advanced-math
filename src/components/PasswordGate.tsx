@@ -12,6 +12,7 @@ import {
   isDecoyPassword,
   loadKeystrokePattern,
   matchKeystrokePattern,
+  addAuditEntry,
 } from "@/lib/security";
 
 interface PasswordGateProps {
@@ -116,6 +117,7 @@ const PasswordGate = ({ onUnlock, onDecoy }: PasswordGateProps) => {
       }
       onUnlock();
     } else {
+      addAuditEntry("failed_attempt", `Failed password attempt`);
       const attempts = recordFailedAttempt();
       setFailedAttempts(attempts);
 
