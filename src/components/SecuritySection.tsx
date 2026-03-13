@@ -620,4 +620,89 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
   );
 };
 
+const AUDIT_LABELS: Record<string, { label: string; color: string }> = {
+  unlock: { label: "Unlocked", color: "text-primary" },
+  lock: { label: "Locked", color: "text-muted-foreground" },
+  panic: { label: "Panic", color: "text-destructive" },
+  failed_attempt: { label: "Failed Attempt", color: "text-destructive" },
+  decoy_used: { label: "Decoy Used", color: "text-yellow-500" },
+  emergency_wipe: { label: "Emergency Wipe", color: "text-destructive" },
+  session_timeout: { label: "Session Timeout", color: "text-muted-foreground" },
+  stealth_triggered: { label: "Stealth Mode", color: "text-destructive" },
+  pattern_unlock: { label: "Pattern Unlock", color: "text-primary" },
+  pattern_fail: { label: "Pattern Fail", color: "text-destructive" },
+  devtools_detected: { label: "DevTools Detected", color: "text-destructive" },
+  tab_switch_lock: { label: "Tab Switch Lock", color: "text-muted-foreground" },
+  mouse_leave_lock: { label: "Mouse Leave Lock", color: "text-muted-foreground" },
+  window_blur_lock: { label: "Window Blur Lock", color: "text-muted-foreground" },
+};
+
+const AuditLogSection = () => {
+  const [log, setLog] = useState<AuditEntry[]>(getAuditLog());
+  const [expanded, setExpanded] = useState(false);
+
+  const refresh = () => setLog(getAuditLog());
+
+  const handleClear = () => {
+    clearAuditLog();
+    setLog([]);
+  };
+
+  const formatTime = (ts: number) => {
+    const d = new Date(ts);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " +
+      d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  };
+
+  const displayLog = expanded ? log : log.slice(0, 8);
+
+  return (
+    <div className="p-3 rounded-lg border border-border bg-secondary/30">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <ScrollText className="h-4 w-4 text-primary" />
+          <span className="text-sm font-mono text-foreground">Security Audit Log</span>
+          <span className="text-xs text-muted-foreground font-mono">({log.length})</span>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={refresh} className="text-xs font-mono h-6 px-2">
+            Refresh
+          </Button>
+          {log.length > 0 && (
+            <Button size="sm" variant="outline" onClick={handleClear} className="text-xs font-mono h-6 px-2 border-destructive/30 text-destructive hover:bg-destructive/10">
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
+      {log.length === 0 ? (
+        <p className="text-xs text-muted-foreground font-mono">No events recorded yet</p>
+      ) : (
+        <div className="space-y-1 max-h-64 overflow-y-auto">
+          {displayLog.map((entry, i) => {
+            const info = AUDIT_LABELS[entry.type] || { label: entry.type, color: "text-foreground" };
+            return (
+              <div key={i} className="flex items-center gap-2 text-xs font-mono py-1 border-b border-border/30 last:border-0">
+                <span className="text-muted-foreground shrink-0 w-32">{formatTime(entry.timestamp)}</span>
+                <span className={`font-semibold shrink-0 ${info.color}`}>{info.label}</span>
+                {entry.detail && <span className="text-muted-foreground truncate">{entry.detail}</span>}
+              </div>
+            );
+          })}
+          {log.length > 8 && !expanded && (
+            <Button variant="ghost" size="sm" onClick={() => setExpanded(true)} className="text-xs font-mono w-full">
+              Show all ({log.length} entries)
+            </Button>
+          )}
+          {expanded && log.length > 8 && (
+            <Button variant="ghost" size="sm" onClick={() => setExpanded(false)} className="text-xs font-mono w-full">
+              Show less
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default SecuritySection;
