@@ -488,6 +488,107 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
           </div>
         )}
 
+        {/* Keystroke Pattern Lock */}
+        <div className="p-3 rounded-lg border border-border bg-secondary/30">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Fingerprint className="h-4 w-4 text-primary" />
+              <span className="text-sm font-mono text-foreground">Keystroke Pattern Lock</span>
+            </div>
+            <Button
+              onClick={() => handleToggle("keystrokePatternLock")}
+              variant={settings.keystrokePatternLock ? "default" : "outline"}
+              size="sm"
+              className="text-xs font-mono"
+            >
+              {settings.keystrokePatternLock ? "ON" : "OFF"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Unlock with a specific rhythm of key taps instead of (or alongside) password
+          </p>
+          {existingPattern ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-primary">
+                Pattern set ({existingPattern.length} taps)
+              </span>
+              <Button size="sm" variant="outline" onClick={() => { setPatternRecording(true); setPatternTaps([]); lastTapRef.current = 0; }} className="text-xs font-mono">
+                Re-record
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleClearPattern} className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10">
+                Clear
+              </Button>
+            </div>
+          ) : !patternRecording ? (
+            <Button size="sm" variant="outline" onClick={() => setPatternRecording(true)} className="text-xs font-mono">
+              Record Pattern
+            </Button>
+          ) : null}
+          {patternRecording && (
+            <div className="mt-2 p-3 rounded border border-primary/30 bg-primary/5 space-y-2">
+              <p className="text-xs font-mono text-foreground">
+                Tap the button rhythmically to create your pattern ({patternTaps.length + 1} taps so far)
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={handlePatternTap} className="text-xs font-mono flex-1">
+                  TAP ({patternTaps.length + 1})
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={savePattern} disabled={patternTaps.length < 2} className="text-xs font-mono">
+                  Save Pattern
+                </Button>
+                <Button size="sm" variant="outline" onClick={cancelPatternRecording} className="text-xs font-mono">
+                  Cancel
+                </Button>
+              </div>
+              {patternTaps.length > 0 && (
+                <p className="text-xs text-muted-foreground font-mono">
+                  Intervals: {patternTaps.map(t => `${t}ms`).join(", ")}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Stealth Mode Hotkey */}
+        <div className="p-3 rounded-lg border border-border bg-secondary/30">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Ghost className="h-4 w-4 text-primary" />
+              <span className="text-sm font-mono text-foreground">Stealth Mode Hotkey</span>
+            </div>
+            <Button
+              onClick={() => handleToggle("stealthModeEnabled")}
+              variant={settings.stealthModeEnabled ? "default" : "outline"}
+              size="sm"
+              className="text-xs font-mono"
+            >
+              {settings.stealthModeEnabled ? "ON" : "OFF"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Press Alt+{settings.stealthModeKey.toUpperCase()} to instantly trigger panic + attempt to minimize window
+          </p>
+          {editingStealth ? (
+            <div className="flex gap-2">
+              <Input
+                value={stealthKeyInput}
+                onChange={(e) => setStealthKeyInput(e.target.value.slice(-1))}
+                placeholder="Key"
+                className="text-xs font-mono h-8 w-20"
+                maxLength={1}
+              />
+              <Button size="sm" onClick={handleSaveStealthKey} className="text-xs font-mono">Save</Button>
+              <Button size="sm" variant="outline" onClick={() => { setEditingStealth(false); setStealthKeyInput(settings.stealthModeKey); }} className="text-xs font-mono">Cancel</Button>
+            </div>
+          ) : (
+            <Button size="sm" variant="outline" onClick={() => setEditingStealth(true)} className="text-xs font-mono">
+              Change Key (Alt+{settings.stealthModeKey.toUpperCase()})
+            </Button>
+          )}
+        </div>
+
         {/* Emergency Data Wipe */}
         <div className="p-3 rounded-lg border border-destructive/40 bg-destructive/5">
           <div className="flex items-center gap-2 mb-1">
