@@ -24,6 +24,9 @@ import {
   saveKeystrokePattern,
   clearKeystrokePattern,
   type KeystrokePattern,
+  getAuditLog,
+  clearAuditLog,
+  type AuditEntry,
 } from "@/lib/security";
 
 interface SecuritySectionProps {
