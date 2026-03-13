@@ -31,6 +31,7 @@ import {
   disableIframeDetection,
   scrambleHistory,
   wipeClipboard,
+  addAuditEntry,
 } from "@/lib/security";
 
 type AppState = "gate" | "locked" | "unlocked" | "panic" | "decoy";
