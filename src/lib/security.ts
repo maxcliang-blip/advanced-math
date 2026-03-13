@@ -18,6 +18,9 @@ export interface SecuritySettings {
   disableTextSelection: boolean;
   iframeDetection: boolean;
   historyScramble: boolean;
+  keystrokePatternLock: boolean;
+  stealthModeEnabled: boolean;
+  stealthModeKey: string;
 }
 
 const SECURITY_KEY = "cloak_security_settings";
