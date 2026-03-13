@@ -47,6 +47,9 @@ const defaults: SecuritySettings = {
   disableTextSelection: false,
   iframeDetection: false,
   historyScramble: false,
+  keystrokePatternLock: false,
+  stealthModeEnabled: false,
+  stealthModeKey: "h",
 };
 
 export function loadSecuritySettings(): SecuritySettings {
