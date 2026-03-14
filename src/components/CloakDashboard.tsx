@@ -24,7 +24,7 @@ import UnitConverter from "@/components/UnitConverter";
 import EquationSolver from "@/components/EquationSolver";
 import GraphingCalculator from "@/components/GraphingCalculator";
 import { useDraggable } from "@/hooks/use-draggable";
-import { EyeOff, ExternalLink, Shield, TriangleAlert as AlertTriangle, Trash2, Settings, Clock, X, Bookmark, BookmarkPlus, Pencil, Check, Globe, ArrowLeft, ArrowRight, RotateCw, Maximize2, Minimize2, Palette, FolderPlus, Folder, Eye, EyeOff as EyeOffIcon, ShieldCheck, Search, Ban, Plus, FileText, Lock, History, ChevronDown, TrendingUp } from "lucide-react";
+import { EyeOff, ExternalLink, Shield, TriangleAlert as AlertTriangle, Trash2, Settings, Clock, X, Bookmark, BookmarkPlus, Pencil, Check, Globe, ArrowLeft, ArrowRight, RotateCw, Maximize2, Minimize2, Palette, FolderPlus, Folder, Eye, EyeOff as EyeOffIcon, ShieldCheck, Search, Ban, Plus, FileText, Lock, History, ChevronDown, TrendingUp, Zap } from "lucide-react";
 
 interface CloakDashboardProps {
   onPanic: () => void;

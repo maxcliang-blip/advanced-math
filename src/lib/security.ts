@@ -535,7 +535,7 @@ export function generateBrowserFingerprint(): string {
     },
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     hardwareConcurrency: navigator.hardwareConcurrency,
-    deviceMemory: (navigator.deviceMemory as any) || 0,
+    deviceMemory: (navigator as any).deviceMemory || 0,
     maxTouchPoints: navigator.maxTouchPoints,
   };
   const json = JSON.stringify(fingerprint);
