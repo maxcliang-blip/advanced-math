@@ -684,725 +684,725 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
         </div>
       </header>
 
-      <main className="flex-1 p-6 max-w-3xl mx-auto w-full space-y-8">
-        {/* Proxy Browser */}
-        <section className="space-y-4">
-          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-            <Globe className="h-4 w-4" /> Proxy Browser
-          </h2>
-          <div className="flex gap-2">
-            <div className="flex items-center gap-1">
-              <Button onClick={proxyGoBack} variant="ghost" size="sm" className="h-10 w-8 p-0 text-muted-foreground hover:text-foreground" disabled={proxyHistoryIndex <= 0}>
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <Button onClick={proxyGoForward} variant="ghost" size="sm" className="h-10 w-8 p-0 text-muted-foreground hover:text-foreground" disabled={proxyHistoryIndex >= proxyHistory.length - 1}>
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-              <Button onClick={proxyRefresh} variant="ghost" size="sm" className="h-10 w-8 p-0 text-muted-foreground hover:text-foreground" disabled={!proxyActive}>
-                <RotateCw className="h-4 w-4" />
-              </Button>
-            </div>
+      <main className="flex-1 p-6 max-w-3xl mx-auto w-full">
+        <Tabs defaultValue="browse" className="w-full">
+          <TabsList className="w-full grid grid-cols-4 mb-6 bg-secondary">
+            <TabsTrigger value="browse" className="text-xs font-mono data-[state=active]:text-primary">Browse</TabsTrigger>
+            <TabsTrigger value="tools" className="text-xs font-mono data-[state=active]:text-primary">Tools</TabsTrigger>
+            <TabsTrigger value="security" className="text-xs font-mono data-[state=active]:text-primary">Security</TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs font-mono data-[state=active]:text-primary">Settings</TabsTrigger>
+          </TabsList>
 
-            {/* Search engine selector */}
-            <div className="relative">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-10 px-2 border-border text-muted-foreground hover:text-foreground hover:border-primary font-mono text-xs gap-1"
-                onClick={() => setShowEngineDropdown(!showEngineDropdown)}
-              >
-                <Search className="h-3 w-3" />
-                {SEARCH_ENGINES[searchEngine].label}
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-              {showEngineDropdown && (
-                <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-md shadow-lg py-1 min-w-[140px]">
-                  {Object.entries(SEARCH_ENGINES).map(([key, engine]) => (
-                    <button
-                      key={key}
-                      onClick={() => { setSearchEngine(key); setShowEngineDropdown(false); }}
-                      className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors ${
-                        searchEngine === key ? "text-primary bg-secondary" : "text-foreground hover:bg-secondary hover:text-primary"
-                      }`}
-                    >
-                      {engine.label}
-                    </button>
-                  ))}
+          {/* ===== BROWSE TAB ===== */}
+          <TabsContent value="browse" className="space-y-8">
+            {/* Proxy Browser */}
+            <section className="space-y-4">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Globe className="h-4 w-4" /> Proxy Browser
+              </h2>
+              <div className="flex gap-2">
+                <div className="flex items-center gap-1">
+                  <Button onClick={proxyGoBack} variant="ghost" size="sm" className="h-10 w-8 p-0 text-muted-foreground hover:text-foreground" disabled={proxyHistoryIndex <= 0}>
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <Button onClick={proxyGoForward} variant="ghost" size="sm" className="h-10 w-8 p-0 text-muted-foreground hover:text-foreground" disabled={proxyHistoryIndex >= proxyHistory.length - 1}>
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                  <Button onClick={proxyRefresh} variant="ghost" size="sm" className="h-10 w-8 p-0 text-muted-foreground hover:text-foreground" disabled={!proxyActive}>
+                    <RotateCw className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Search engine selector */}
+                <div className="relative">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 px-2 border-border text-muted-foreground hover:text-foreground hover:border-primary font-mono text-xs gap-1"
+                    onClick={() => setShowEngineDropdown(!showEngineDropdown)}
+                  >
+                    <Search className="h-3 w-3" />
+                    {SEARCH_ENGINES[searchEngine].label}
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                  {showEngineDropdown && (
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-md shadow-lg py-1 min-w-[140px]">
+                      {Object.entries(SEARCH_ENGINES).map(([key, engine]) => (
+                        <button
+                          key={key}
+                          onClick={() => { setSearchEngine(key); setShowEngineDropdown(false); }}
+                          className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors ${
+                            searchEngine === key ? "text-primary bg-secondary" : "text-foreground hover:bg-secondary hover:text-primary"
+                          }`}
+                        >
+                          {engine.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Input
+                  value={proxyInput}
+                  onChange={(e) => setProxyInput(e.target.value)}
+                  placeholder={`Search with ${SEARCH_ENGINES[searchEngine].label} or enter URL...`}
+                  className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm"
+                  onKeyDown={(e) => e.key === "Enter" && navigateProxy()}
+                />
+                <Button
+                  onClick={() => navigateProxy()}
+                  className="bg-primary text-primary-foreground hover:bg-primary/80 glow-box font-mono"
+                >
+                  GO
+                </Button>
+                {proxyActive && (
+                  <Button
+                    onClick={() => setProxyFullscreen(true)}
+                    variant="outline"
+                    size="icon"
+                    className="border-border text-muted-foreground hover:text-primary hover:border-primary"
+                    title="Fullscreen"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              {proxyActive && (
+                <div className="rounded-lg border border-border overflow-hidden bg-background">
+                  <iframe
+                    ref={iframeRef}
+                    src={proxyUrl}
+                    className="w-full border-none"
+                    style={{ height: "60vh" }}
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+                    title="Proxy Browser"
+                  />
                 </div>
               )}
-            </div>
 
-            <Input
-              value={proxyInput}
-              onChange={(e) => setProxyInput(e.target.value)}
-              placeholder={`Search with ${SEARCH_ENGINES[searchEngine].label} or enter URL...`}
-              className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm"
-              onKeyDown={(e) => e.key === "Enter" && navigateProxy()}
-            />
-            <Button
-              onClick={() => navigateProxy()}
-              className="bg-primary text-primary-foreground hover:bg-primary/80 glow-box font-mono"
-            >
-              GO
-            </Button>
-            {proxyActive && (
-              <Button
-                onClick={() => setProxyFullscreen(true)}
-                variant="outline"
-                size="icon"
-                className="border-border text-muted-foreground hover:text-primary hover:border-primary"
-                title="Fullscreen"
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-
-          {proxyActive && (
-            <div className="rounded-lg border border-border overflow-hidden bg-background">
-              <iframe
-                ref={iframeRef}
-                src={proxyUrl}
-                className="w-full border-none"
-                style={{ height: "60vh" }}
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-                title="Proxy Browser"
-              />
-            </div>
-          )}
-
-          {!proxyActive && (
-            <div className="rounded-lg border border-border bg-secondary/30 flex flex-col items-center justify-center py-16 text-center space-y-3">
-              <Globe className="h-10 w-10 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground font-mono">
-                Enter a URL or search term above to browse
-              </p>
-              <p className="text-xs text-muted-foreground/60">
-                Note: Some sites may block iframe embedding
-              </p>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {[
-              { label: "Google", url: "https://www.google.com/webhp?igu=1" },
-              { label: "Wikipedia", url: "https://en.wikipedia.org" },
-              { label: "Reddit", url: "https://old.reddit.com" },
-              { label: "DuckDuckGo", url: "https://duckduckgo.com" },
-            ].map((site) => (
-              <Button
-                key={site.label}
-                variant="outline"
-                size="sm"
-                onClick={() => { setProxyInput(site.url); navigateProxy(site.url); }}
-                className="text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"
-              >
-                {site.label}
-              </Button>
-            ))}
-          </div>
-        </section>
-
-        {/* Site Blocker */}
-        <section className="space-y-4 border-t border-border pt-6">
-          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-            <Ban className="h-4 w-4" /> Site Blocker
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Block distracting sites — they won't load in the proxy browser or cloaked tabs.
-          </p>
-          <div className="flex gap-2">
-            <Input
-              value={newBlockedSite}
-              onChange={(e) => setNewBlockedSite(e.target.value)}
-              placeholder="e.g. tiktok.com, instagram.com"
-              className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm"
-              onKeyDown={(e) => e.key === "Enter" && addBlockedSite()}
-            />
-            <Button
-              onClick={addBlockedSite}
-              variant="outline"
-              size="sm"
-              className="border-border text-muted-foreground hover:text-primary hover:border-primary font-mono"
-            >
-              <Plus className="h-4 w-4 mr-1" /> Block
-            </Button>
-          </div>
-          {blockedSites.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {blockedSites.map((site) => (
-                <div
-                  key={site}
-                  className="flex items-center gap-1.5 bg-destructive/10 border border-destructive/30 rounded px-2.5 py-1 text-xs font-mono text-destructive"
-                >
-                  <Ban className="h-3 w-3" />
-                  {site}
-                  <button
-                    onClick={() => setBlockedSites((prev) => prev.filter((s) => s !== site))}
-                    className="hover:text-foreground ml-1"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
+              {!proxyActive && (
+                <div className="rounded-lg border border-border bg-secondary/30 flex flex-col items-center justify-center py-16 text-center space-y-3">
+                  <Globe className="h-10 w-10 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground font-mono">
+                    Enter a URL or search term above to browse
+                  </p>
+                  <p className="text-xs text-muted-foreground/60">
+                    Note: Some sites may block iframe embedding
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              )}
 
-        {/* Cloak URL */}
-        <section className="space-y-4 border-t border-border pt-6">
-          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-            <ExternalLink className="h-4 w-4" /> Open in Cloaked Tab
-          </h2>
-          <div className="flex gap-2">
-            <Input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com"
-              className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
-              onKeyDown={(e) => e.key === "Enter" && openCloaked()}
-            />
-            <Button
-              onClick={openCloaked}
-              className="bg-primary text-primary-foreground hover:bg-primary/80 glow-box font-mono"
-            >
-              CLOAK
-            </Button>
-            <Button
-              onClick={addBookmark}
-              variant="outline"
-              size="icon"
-              className="border-border text-muted-foreground hover:text-primary hover:border-primary"
-              title="Bookmark this URL"
-            >
-              <BookmarkPlus className="h-4 w-4" />
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Opens URL inside an about:blank tab with a disguised title & icon
-          </p>
-        </section>
-
-        {/* Tab Cloaking */}
-        <section className="space-y-4 border-t border-border pt-6">
-          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-            <Settings className="h-4 w-4" /> Tab Cloaking
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Tab Title</label>
-              <Input
-                value={tabTitle}
-                onChange={(e) => setTabTitle(e.target.value)}
-                className="bg-secondary border-border text-foreground focus:border-primary"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Favicon URL</label>
-              <Input
-                value={tabIcon}
-                onChange={(e) => setTabIcon(e.target.value)}
-                className="bg-secondary border-border text-foreground focus:border-primary"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs text-muted-foreground">Quick Presets</label>
-            <div className="flex flex-wrap gap-2">
-              {tabPresets.map((p) => (
-                <Button
-                  key={p.name}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setTabTitle(p.title);
-                    setTabIcon(p.icon);
-                    applyCloakPreset(p);
-                    setActiveCloak(p);
-                  }}
-                  className={`text-xs font-mono border-border hover:border-primary hover:bg-secondary ${
-                    activeCloak?.name === p.name ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {p.name}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              onClick={cloakCurrentTab}
-              variant="outline"
-              className="flex-1 border-primary/30 text-foreground hover:bg-primary/10 hover:border-primary font-mono text-sm"
-            >
-              Apply Custom Disguise
-            </Button>
-            {activeCloak && (
-              <Button
-                onClick={() => { clearCloak(); setActiveCloak(null); document.title = "CLOAK"; }}
-                variant="outline"
-                size="sm"
-                className="text-xs font-mono border-border text-muted-foreground hover:text-destructive hover:border-destructive"
-              >
-                <X className="h-3 w-3 mr-1" /> Clear
-              </Button>
-            )}
-          </div>
-          {activeCloak && (
-            <p className="text-xs text-primary font-mono">Active: {activeCloak.title}</p>
-          )}
-
-          {/* Custom presets */}
-          {customPresets.length > 0 && (
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Custom Presets</label>
               <div className="flex flex-wrap gap-2">
-                {customPresets.map((p) => (
-                  <div key={p.name} className="flex items-center gap-0.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setTabTitle(p.title); setTabIcon(p.icon); applyCloakPreset(p); setActiveCloak(p); }}
-                      className={`text-xs font-mono border-border hover:border-primary hover:bg-secondary ${activeCloak?.name === p.name ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"}`}
-                    >
-                      {p.name}
-                    </Button>
-                    <button
-                      onClick={() => setCustomPresets(removeCustomPreset(p.name))}
-                      className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
-                      title="Remove"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
+                {[
+                  { label: "Google", url: "https://www.google.com/webhp?igu=1" },
+                  { label: "Wikipedia", url: "https://en.wikipedia.org" },
+                  { label: "Reddit", url: "https://old.reddit.com" },
+                  { label: "DuckDuckGo", url: "https://duckduckgo.com" },
+                ].map((site) => (
+                  <Button
+                    key={site.label}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setProxyInput(site.url); navigateProxy(site.url); }}
+                    className="text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"
+                  >
+                    {site.label}
+                  </Button>
                 ))}
               </div>
-            </div>
-          )}
+            </section>
 
-          {/* Add custom preset */}
-          {showAddPreset ? (
-            <div className="space-y-2 p-3 bg-secondary/40 rounded-lg border border-border">
-              <p className="text-xs font-mono text-muted-foreground">New Tab Preset</p>
-              <div className="grid grid-cols-1 gap-2">
-                <Input placeholder="Name (e.g. My School)" value={newPresetName} onChange={(e) => setNewPresetName(e.target.value)} className="bg-background border-border text-foreground text-xs h-7" />
-                <Input placeholder="Tab title text" value={newPresetTitle} onChange={(e) => setNewPresetTitle(e.target.value)} className="bg-background border-border text-foreground text-xs h-7" />
-                <Input placeholder="Favicon URL (optional)" value={newPresetIcon} onChange={(e) => setNewPresetIcon(e.target.value)} className="bg-background border-border text-foreground text-xs h-7" />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs font-mono border-primary text-primary hover:bg-primary/10 h-7"
-                  onClick={() => {
-                    if (!newPresetName.trim() || !newPresetTitle.trim()) return;
-                    setCustomPresets(addCustomPreset({ name: newPresetName.trim(), title: newPresetTitle.trim(), icon: newPresetIcon.trim() }));
-                    setNewPresetName(""); setNewPresetTitle(""); setNewPresetIcon("");
-                    setShowAddPreset(false);
-                  }}
-                >
-                  <Check className="h-3 w-3 mr-1" /> Save
-                </Button>
-                <Button size="sm" variant="ghost" className="text-xs font-mono text-muted-foreground h-7" onClick={() => setShowAddPreset(false)}>Cancel</Button>
-              </div>
-            </div>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAddPreset(true)}
-              className="text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary gap-1"
-              data-testid="button-add-custom-preset"
-            >
-              <Plus className="h-3 w-3" /> Add Custom Preset
-            </Button>
-          )}
-        </section>
-
-        {/* Notes / Scratchpad */}
-        <section id="notes-section" className="space-y-4 border-t border-border pt-6">
-          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-            <FileText className="h-4 w-4" /> Encrypted Notes
-          </h2>
-
-          {!notesUnlocked ? (
-            <div className="space-y-3">
+            {/* Site Blocker */}
+            <section className="space-y-4 border-t border-border pt-6">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Ban className="h-4 w-4" /> Site Blocker
+              </h2>
               <p className="text-xs text-muted-foreground">
-                Enter a passphrase to unlock your encrypted scratchpad. Your notes are obfuscated with this key.
+                Block distracting sites — they won't load in the proxy browser or cloaked tabs.
               </p>
               <div className="flex gap-2">
                 <Input
-                  type="password"
-                  value={notesKeyInput}
-                  onChange={(e) => setNotesKeyInput(e.target.value)}
-                  placeholder="Enter passphrase..."
+                  value={newBlockedSite}
+                  onChange={(e) => setNewBlockedSite(e.target.value)}
+                  placeholder="e.g. tiktok.com, instagram.com"
                   className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm"
-                  onKeyDown={(e) => e.key === "Enter" && unlockNotes()}
+                  onKeyDown={(e) => e.key === "Enter" && addBlockedSite()}
                 />
                 <Button
-                  onClick={unlockNotes}
+                  onClick={addBlockedSite}
                   variant="outline"
-                  className="border-primary/30 text-foreground hover:bg-primary/10 hover:border-primary font-mono text-sm gap-1"
+                  size="sm"
+                  className="border-border text-muted-foreground hover:text-primary hover:border-primary font-mono"
                 >
-                  <Lock className="h-3 w-3" /> Unlock
+                  <Plus className="h-4 w-4 mr-1" /> Block
                 </Button>
               </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Write your private notes here..."
-                className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm min-h-[150px] resize-y"
-              />
+              {blockedSites.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {blockedSites.map((site) => (
+                    <div
+                      key={site}
+                      className="flex items-center gap-1.5 bg-destructive/10 border border-destructive/30 rounded px-2.5 py-1 text-xs font-mono text-destructive"
+                    >
+                      <Ban className="h-3 w-3" />
+                      {site}
+                      <button
+                        onClick={() => setBlockedSites((prev) => prev.filter((s) => s !== site))}
+                        className="hover:text-foreground ml-1"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Cloak URL */}
+            <section className="space-y-4 border-t border-border pt-6">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <ExternalLink className="h-4 w-4" /> Open in Cloaked Tab
+              </h2>
               <div className="flex gap-2">
+                <Input
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
+                  onKeyDown={(e) => e.key === "Enter" && openCloaked()}
+                />
                 <Button
-                  onClick={saveNotes}
-                  variant="outline"
-                  className="border-primary/30 text-foreground hover:bg-primary/10 hover:border-primary font-mono text-sm gap-1"
+                  onClick={openCloaked}
+                  className="bg-primary text-primary-foreground hover:bg-primary/80 glow-box font-mono"
                 >
-                  <Check className="h-3 w-3" /> Save
+                  CLOAK
                 </Button>
                 <Button
-                  onClick={lockNotes}
+                  onClick={addBookmark}
                   variant="outline"
-                  className="border-border text-muted-foreground hover:text-foreground hover:bg-secondary font-mono text-sm gap-1"
+                  size="icon"
+                  className="border-border text-muted-foreground hover:text-primary hover:border-primary"
+                  title="Bookmark this URL"
                 >
-                  <Lock className="h-3 w-3" /> Lock
+                  <BookmarkPlus className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Opens URL inside an about:blank tab with a disguised title & icon
+              </p>
+            </section>
+
+            {/* History */}
+            {history.length > 0 && (
+              <section className="space-y-4 border-t border-border pt-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                    <Clock className="h-4 w-4" /> Recent History
+                  </h2>
+                  <Button
+                    onClick={clearHistory}
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs font-mono text-muted-foreground hover:text-destructive"
+                  >
+                    Clear All
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  {history.map((h) => (
+                    <div
+                      key={h.url + h.time}
+                      className="flex items-center gap-2 group rounded px-2 py-1.5 hover:bg-secondary"
+                    >
+                      <button
+                        onClick={() => { setProxyInput(h.url); navigateProxy(h.url); }}
+                        className="flex-1 text-left text-sm font-mono text-foreground truncate hover:text-primary transition-colors"
+                      >
+                        {h.url}
+                      </button>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(h.time).toLocaleDateString()}
+                      </span>
+                      <Button
+                        onClick={() => removeFromHistory(h.url)}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Bookmarks with Folders */}
+            <section className="space-y-4 border-t border-border pt-6">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Bookmark className="h-4 w-4" /> Bookmarks
+              </h2>
+
+              {/* Folder tabs */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {bookmarkFolders.map((folder) => (
+                  <div key={folder} className="group flex items-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setActiveFolder(folder)}
+                      className={`text-xs font-mono border-border hover:border-primary ${
+                        activeFolder === folder ? "text-primary border-primary bg-secondary" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Folder className="h-3 w-3 mr-1" />
+                      {folder}
+                      {folder !== "General" && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeFolder(folder); }}
+                          className="ml-1 opacity-0 group-hover:opacity-100 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </Button>
+                  </div>
+                ))}
+                {addingFolder ? (
+                  <form onSubmit={(e) => { e.preventDefault(); addFolder(); }} className="flex items-center gap-1">
+                    <Input
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      className="h-8 w-28 text-xs font-mono bg-secondary border-primary px-2"
+                      placeholder="Folder name"
+                      autoFocus
+                      onBlur={() => { if (!newFolderName) setAddingFolder(false); }}
+                    />
+                    <Button type="submit" variant="ghost" size="sm" className="h-7 w-7 p-0 text-primary">
+                      <Check className="h-3 w-3" />
+                    </Button>
+                  </form>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAddingFolder(true)}
+                    className="h-8 text-xs text-muted-foreground hover:text-primary"
+                  >
+                    <FolderPlus className="h-3 w-3 mr-1" /> Add Folder
+                  </Button>
+                )}
+              </div>
+
+              {/* Bookmarks in active folder */}
+              {filteredBookmarks.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {filteredBookmarks.map((b) => (
+                    <div key={b.url} className="group flex items-center gap-1 bg-secondary rounded px-3 py-1.5 border border-border hover:border-primary transition-colors">
+                      {editingBookmark === b.url ? (
+                        <form
+                          className="flex items-center gap-1"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            renameBookmark(b.url, editLabel || b.label);
+                            setEditingBookmark(null);
+                          }}
+                        >
+                          <Input
+                            value={editLabel}
+                            onChange={(e) => setEditLabel(e.target.value)}
+                            className="h-6 w-32 text-xs font-mono bg-background border-primary px-1"
+                            autoFocus
+                            onBlur={() => {
+                              renameBookmark(b.url, editLabel || b.label);
+                              setEditingBookmark(null);
+                            }}
+                          />
+                          <Button type="submit" variant="ghost" size="sm" className="h-5 w-5 p-0 text-primary">
+                            <Check className="h-3 w-3" />
+                          </Button>
+                        </form>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => { setProxyInput(b.url); navigateProxy(b.url); }}
+                            className="text-sm font-mono text-foreground hover:text-primary transition-colors truncate max-w-[200px]"
+                          >
+                            {b.label}
+                          </button>
+                          <Button
+                            onClick={() => { setEditingBookmark(b.url); setEditLabel(b.label); }}
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        onClick={() => removeBookmark(b.url)}
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground font-mono">No bookmarks in "{activeFolder}" — use the <BookmarkPlus className="inline h-3 w-3" /> button to add one</p>
+              )}
+            </section>
+          </TabsContent>
+
+          {/* ===== TOOLS TAB ===== */}
+          <TabsContent value="tools" className="space-y-8">
+            {/* Tab Cloaking */}
+            <section className="space-y-4">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Settings className="h-4 w-4" /> Tab Cloaking
+              </h2>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Tab Title</label>
+                  <Input
+                    value={tabTitle}
+                    onChange={(e) => setTabTitle(e.target.value)}
+                    className="bg-secondary border-border text-foreground focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Tab Icon URL</label>
+                  <Input
+                    value={tabIcon}
+                    onChange={(e) => setTabIcon(e.target.value)}
+                    className="bg-secondary border-border text-foreground focus:border-primary"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  onClick={cloakCurrentTab}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary gap-1"
+                >
+                  <Shield className="h-3 w-3" /> Apply to This Tab
+                </Button>
+                {activeCloak && (
+                  <Button
+                    onClick={() => { clearCloak(); setActiveCloak(null); }}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10 gap-1"
+                  >
+                    <X className="h-3 w-3" /> Remove Cloak
+                  </Button>
+                )}
+              </div>
+
+              {/* Presets */}
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground">Quick Presets</label>
+                <div className="flex flex-wrap gap-2">
+                  {[...tabPresets, ...customPresets].map((preset) => {
+                    const isCustom = customPresets.some((cp) => cp.name === preset.name);
+                    return (
+                      <div key={preset.name} className="group relative">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setTabTitle(preset.title);
+                            setTabIcon(preset.icon);
+                            applyCloakPreset(preset);
+                            setActiveCloak(preset);
+                          }}
+                          className={`text-xs font-mono border-border hover:border-primary hover:bg-secondary ${
+                            activeCloak?.name === preset.name ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {preset.name}
+                        </Button>
+                        {isCustom && (
+                          <button
+                            onClick={() => setCustomPresets(removeCustomPreset(preset.name))}
+                            className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full h-4 w-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Add custom preset */}
+              {showAddPreset ? (
+                <div className="space-y-2 p-3 border border-border rounded-lg bg-secondary/30">
+                  <Input value={newPresetName} onChange={(e) => setNewPresetName(e.target.value)} placeholder="Preset name" className="bg-secondary border-border text-foreground text-xs font-mono" />
+                  <Input value={newPresetTitle} onChange={(e) => setNewPresetTitle(e.target.value)} placeholder="Tab title" className="bg-secondary border-border text-foreground text-xs font-mono" />
+                  <Input value={newPresetIcon} onChange={(e) => setNewPresetIcon(e.target.value)} placeholder="Icon URL (https://...)" className="bg-secondary border-border text-foreground text-xs font-mono" />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="text-xs font-mono bg-primary text-primary-foreground h-7"
+                      disabled={!newPresetName.trim() || !newPresetTitle.trim()}
+                      onClick={() => {
+                        setCustomPresets(addCustomPreset({ name: newPresetName.trim(), title: newPresetTitle.trim(), icon: newPresetIcon.trim() }));
+                        setNewPresetName(""); setNewPresetTitle(""); setNewPresetIcon("");
+                        setShowAddPreset(false);
+                      }}
+                    >
+                      <Check className="h-3 w-3 mr-1" /> Save
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-xs font-mono text-muted-foreground h-7" onClick={() => setShowAddPreset(false)}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddPreset(true)}
+                  className="text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary gap-1"
+                  data-testid="button-add-custom-preset"
+                >
+                  <Plus className="h-3 w-3" /> Add Custom Preset
+                </Button>
+              )}
+            </section>
+
+            {/* Notes / Scratchpad */}
+            <section id="notes-section" className="space-y-4 border-t border-border pt-6">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Encrypted Notes
+              </h2>
+
+              {!notesUnlocked ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Enter a passphrase to unlock your encrypted scratchpad. Your notes are obfuscated with this key.
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      value={notesKeyInput}
+                      onChange={(e) => setNotesKeyInput(e.target.value)}
+                      placeholder="Enter passphrase..."
+                      className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm"
+                      onKeyDown={(e) => e.key === "Enter" && unlockNotes()}
+                    />
+                    <Button
+                      onClick={unlockNotes}
+                      variant="outline"
+                      className="border-primary/30 text-foreground hover:bg-primary/10 hover:border-primary font-mono text-sm gap-1"
+                    >
+                      <Lock className="h-3 w-3" /> Unlock
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Write your private notes here..."
+                    className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm min-h-[150px] resize-y"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={saveNotes}
+                      variant="outline"
+                      className="border-primary/30 text-foreground hover:bg-primary/10 hover:border-primary font-mono text-sm gap-1"
+                    >
+                      <Check className="h-3 w-3" /> Save
+                    </Button>
+                    <Button
+                      onClick={lockNotes}
+                      variant="outline"
+                      className="border-border text-muted-foreground hover:text-foreground hover:bg-secondary font-mono text-sm gap-1"
+                    >
+                      <Lock className="h-3 w-3" /> Lock
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (confirm("Delete all notes permanently?")) {
+                          setNotes("");
+                          localStorage.removeItem("cloak_notes");
+                        }
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" /> Delete
+                    </Button>
+                  </div>
+                  <p className="text-xs text-primary/60 font-mono">
+                    🔒 Notes are encrypted with your passphrase
+                  </p>
+                </div>
+              )}
+            </section>
+
+            {/* Quick Tools */}
+            <section className="space-y-4 border-t border-border pt-6">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Settings className="h-4 w-4" /> Quick Tools
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: "Calculator", shortcut: "Alt+C", onClick: () => setShowCalc((p) => !p), active: showCalc },
+                  { label: "Stopwatch", shortcut: "Alt+S", onClick: () => setShowStopwatch((p) => !p), active: showStopwatch },
+                  { label: "Converter", shortcut: "Alt+U", onClick: () => setShowConverter((p) => !p), active: showConverter },
+                  { label: "Equation Solver", shortcut: "Alt+E", onClick: () => setShowSolver((p) => !p), active: showSolver },
+                  { label: "Graph", shortcut: "Alt+G", onClick: () => setShowGrapher((p) => !p), active: showGrapher },
+                  { label: "Pomodoro", shortcut: "Alt+M", onClick: () => setShowPomodoro((p) => !p), active: showPomodoro },
+                ].map(({ label, shortcut, onClick, active }) => (
+                  <Button
+                    key={label}
+                    variant="outline"
+                    size="sm"
+                    onClick={onClick}
+                    className={`text-xs font-mono border-border gap-1 ${active ? "text-primary border-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"}`}
+                    data-testid={`tool-btn-${label.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    {label === "Graph" && <TrendingUp className="h-3 w-3" />}
+                    {label}
+                    <span className="text-[9px] opacity-50 ml-0.5">{shortcut}</span>
+                  </Button>
+                ))}
+              </div>
+            </section>
+          </TabsContent>
+
+          {/* ===== SECURITY TAB ===== */}
+          <TabsContent value="security" className="space-y-8">
+            {/* Security */}
+            <SecuritySection
+              onSecurityChange={(s) => {
+                setSecurity(s);
+                onSecurityChange?.(s);
+              }}
+            />
+
+            {/* Panic History Log */}
+            <section className="space-y-4 border-t border-border pt-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <History className="h-4 w-4" /> Panic Log
+                </h2>
+                {panicLog.length > 0 && (
+                  <Button
+                    onClick={() => setPanicLog([])}
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs font-mono text-muted-foreground hover:text-destructive"
+                  >
+                    Clear Log
+                  </Button>
+                )}
+              </div>
+              {panicLog.length > 0 ? (
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {panicLog.map((event, i) => (
+                    <div
+                      key={event.time + i}
+                      className="flex items-center gap-3 rounded px-2 py-1.5 hover:bg-secondary text-xs font-mono"
+                    >
+                      <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
+                      <span className="text-foreground">{event.reason}</span>
+                      <span className="text-muted-foreground ml-auto whitespace-nowrap">
+                        {new Date(event.time).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground font-mono">No panic events recorded yet.</p>
+              )}
+            </section>
+          </TabsContent>
+
+          {/* ===== SETTINGS TAB ===== */}
+          <TabsContent value="settings" className="space-y-8">
+            {/* Profile */}
+            <ProfileSection
+              onProfileChange={(p) => {
+                setProfile(p);
+                onProfileChange?.(p);
+              }}
+            />
+
+            {/* Themes */}
+            <section className="space-y-4 border-t border-border pt-6">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Palette className="h-4 w-4" /> Themes
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {themes.map((t) => (
+                  <Button
+                    key={t.name}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleThemeChange(t.name)}
+                    className={`text-xs font-mono border-border hover:border-primary hover:bg-secondary ${
+                      currentTheme === t.name ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <span
+                      className="inline-block w-3 h-3 rounded-full mr-1.5 border border-border"
+                      style={{ backgroundColor: `hsl(${t.vars["--primary"]})` }}
+                    />
+                    {t.label}
+                  </Button>
+                ))}
+              </div>
+            </section>
+
+            {/* Settings */}
+            <section className="space-y-4 border-t border-border pt-6">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Trash2 className="h-4 w-4" /> Settings
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={resetPassword}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10"
+                >
+                  Reset Password
                 </Button>
                 <Button
                   onClick={() => {
-                    if (confirm("Delete all notes permanently?")) {
-                      setNotes("");
-                      localStorage.removeItem("cloak_notes");
-                    }
+                    clearHistory();
+                    setBookmarks([]);
+                    clearCloak();
+                    setActiveCloak(null);
+                    setBlockedSites([]);
+                    setPanicLog([]);
+                    localStorage.removeItem("cloak_history");
+                    localStorage.removeItem("cloak_bookmarks_v2");
+                    localStorage.removeItem("cloak_blocked_sites");
+                    localStorage.removeItem("cloak_panic_log");
+                    localStorage.removeItem("cloak_notes");
                   }}
                   variant="outline"
                   size="sm"
                   className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10"
                 >
-                  <Trash2 className="h-3 w-3 mr-1" /> Delete
+                  Wipe All Data
                 </Button>
               </div>
-              <p className="text-xs text-primary/60 font-mono">
-                🔒 Notes are encrypted with your passphrase
-              </p>
-            </div>
-          )}
-        </section>
-
-        {/* Themes */}
-        <section className="space-y-4 border-t border-border pt-6">
-          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-            <Palette className="h-4 w-4" /> Themes
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {themes.map((t) => (
-              <Button
-                key={t.name}
-                variant="outline"
-                size="sm"
-                onClick={() => handleThemeChange(t.name)}
-                className={`text-xs font-mono border-border hover:border-primary hover:bg-secondary ${
-                  currentTheme === t.name ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span
-                  className="inline-block w-3 h-3 rounded-full mr-1.5 border border-border"
-                  style={{ backgroundColor: `hsl(${t.vars["--primary"]})` }}
-                />
-                {t.label}
-              </Button>
-            ))}
-          </div>
-        </section>
-
-        {/* Quick Tools */}
-        <section className="space-y-4 border-t border-border pt-6">
-          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-            <Settings className="h-4 w-4" /> Quick Tools
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { label: "Calculator", shortcut: "Alt+C", onClick: () => setShowCalc((p) => !p), active: showCalc },
-              { label: "Stopwatch", shortcut: "Alt+S", onClick: () => setShowStopwatch((p) => !p), active: showStopwatch },
-              { label: "Converter", shortcut: "Alt+U", onClick: () => setShowConverter((p) => !p), active: showConverter },
-              { label: "Equation Solver", shortcut: "Alt+E", onClick: () => setShowSolver((p) => !p), active: showSolver },
-              { label: "Graph", shortcut: "Alt+G", onClick: () => setShowGrapher((p) => !p), active: showGrapher },
-              { label: "Pomodoro", shortcut: "Alt+M", onClick: () => setShowPomodoro((p) => !p), active: showPomodoro },
-            ].map(({ label, shortcut, onClick, active }) => (
-              <Button
-                key={label}
-                variant="outline"
-                size="sm"
-                onClick={onClick}
-                className={`text-xs font-mono border-border gap-1 ${active ? "text-primary border-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"}`}
-                data-testid={`tool-btn-${label.toLowerCase().replace(/\s+/g, "-")}`}
-              >
-                {label === "Graph" && <TrendingUp className="h-3 w-3" />}
-                {label}
-                <span className="text-[9px] opacity-50 ml-0.5">{shortcut}</span>
-              </Button>
-            ))}
-          </div>
-        </section>
-
-        {/* History */}
-        {history.length > 0 && (
-          <section className="space-y-4 border-t border-border pt-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                <Clock className="h-4 w-4" /> Recent History
-              </h2>
-              <Button
-                onClick={clearHistory}
-                variant="ghost"
-                size="sm"
-                className="text-xs font-mono text-muted-foreground hover:text-destructive"
-              >
-                Clear All
-              </Button>
-            </div>
-            <div className="space-y-1">
-              {history.map((h) => (
-                <div
-                  key={h.url + h.time}
-                  className="flex items-center gap-2 group rounded px-2 py-1.5 hover:bg-secondary"
-                >
-                  <button
-                    onClick={() => { setProxyInput(h.url); navigateProxy(h.url); }}
-                    className="flex-1 text-left text-sm font-mono text-foreground truncate hover:text-primary transition-colors"
-                  >
-                    {h.url}
-                  </button>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {new Date(h.time).toLocaleDateString()}
-                  </span>
-                  <Button
-                    onClick={() => removeFromHistory(h.url)}
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Panic History Log */}
-        <section className="space-y-4 border-t border-border pt-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-              <History className="h-4 w-4" /> Panic Log
-            </h2>
-            {panicLog.length > 0 && (
-              <Button
-                onClick={() => setPanicLog([])}
-                variant="ghost"
-                size="sm"
-                className="text-xs font-mono text-muted-foreground hover:text-destructive"
-              >
-                Clear Log
-              </Button>
-            )}
-          </div>
-          {panicLog.length > 0 ? (
-            <div className="space-y-1 max-h-48 overflow-y-auto">
-              {panicLog.map((event, i) => (
-                <div
-                  key={event.time + i}
-                  className="flex items-center gap-3 rounded px-2 py-1.5 hover:bg-secondary text-xs font-mono"
-                >
-                  <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
-                  <span className="text-foreground">{event.reason}</span>
-                  <span className="text-muted-foreground ml-auto whitespace-nowrap">
-                    {new Date(event.time).toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground font-mono">No panic events recorded yet.</p>
-          )}
-        </section>
-
-        {/* Bookmarks with Folders */}
-        <section className="space-y-4 border-t border-border pt-6">
-          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-            <Bookmark className="h-4 w-4" /> Bookmarks
-          </h2>
-
-          {/* Folder tabs */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {bookmarkFolders.map((folder) => (
-              <div key={folder} className="group flex items-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setActiveFolder(folder)}
-                  className={`text-xs font-mono border-border hover:border-primary ${
-                    activeFolder === folder ? "text-primary border-primary bg-secondary" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Folder className="h-3 w-3 mr-1" />
-                  {folder}
-                  {folder !== "General" && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeFolder(folder); }}
-                      className="ml-1 opacity-0 group-hover:opacity-100 hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </Button>
-              </div>
-            ))}
-            {addingFolder ? (
-              <form onSubmit={(e) => { e.preventDefault(); addFolder(); }} className="flex items-center gap-1">
-                <Input
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  className="h-8 w-28 text-xs font-mono bg-secondary border-primary px-2"
-                  placeholder="Folder name"
-                  autoFocus
-                  onBlur={() => { if (!newFolderName) setAddingFolder(false); }}
-                />
-                <Button type="submit" variant="ghost" size="sm" className="h-7 w-7 p-0 text-primary">
-                  <Check className="h-3 w-3" />
-                </Button>
-              </form>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setAddingFolder(true)}
-                className="h-8 text-xs text-muted-foreground hover:text-primary"
-              >
-                <FolderPlus className="h-3 w-3 mr-1" /> Add Folder
-              </Button>
-            )}
-          </div>
-
-          {/* Bookmarks in active folder */}
-          {filteredBookmarks.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {filteredBookmarks.map((b) => (
-                <div key={b.url} className="group flex items-center gap-1 bg-secondary rounded px-3 py-1.5 border border-border hover:border-primary transition-colors">
-                  {editingBookmark === b.url ? (
-                    <form
-                      className="flex items-center gap-1"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        renameBookmark(b.url, editLabel || b.label);
-                        setEditingBookmark(null);
-                      }}
-                    >
-                      <Input
-                        value={editLabel}
-                        onChange={(e) => setEditLabel(e.target.value)}
-                        className="h-6 w-32 text-xs font-mono bg-background border-primary px-1"
-                        autoFocus
-                        onBlur={() => {
-                          renameBookmark(b.url, editLabel || b.label);
-                          setEditingBookmark(null);
-                        }}
-                      />
-                      <Button type="submit" variant="ghost" size="sm" className="h-5 w-5 p-0 text-primary">
-                        <Check className="h-3 w-3" />
-                      </Button>
-                    </form>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => { setProxyInput(b.url); navigateProxy(b.url); }}
-                        className="text-sm font-mono text-foreground hover:text-primary transition-colors truncate max-w-[200px]"
-                      >
-                        {b.label}
-                      </button>
-                      <Button
-                        onClick={() => { setEditingBookmark(b.url); setEditLabel(b.label); }}
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                    </>
-                  )}
-                  <Button
-                    onClick={() => removeBookmark(b.url)}
-                    variant="ghost"
-                    size="sm"
-                    className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground font-mono">No bookmarks in "{activeFolder}" — use the <BookmarkPlus className="inline h-3 w-3" /> button to add one</p>
-          )}
-        </section>
-
-        {/* Security */}
-        <SecuritySection
-          onSecurityChange={(s) => {
-            setSecurity(s);
-            onSecurityChange?.(s);
-          }}
-        />
-
-        {/* Profile */}
-        <ProfileSection
-          onProfileChange={(p) => {
-            setProfile(p);
-            onProfileChange?.(p);
-          }}
-        />
-
-        {/* Settings */}
-        <section className="space-y-4 border-t border-border pt-6">
-          <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-            <Trash2 className="h-4 w-4" /> Settings
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={resetPassword}
-              variant="outline"
-              size="sm"
-              className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10"
-            >
-              Reset Password
-            </Button>
-            <Button
-              onClick={() => {
-                clearHistory();
-                setBookmarks([]);
-                clearCloak();
-                setActiveCloak(null);
-                setBlockedSites([]);
-                setPanicLog([]);
-                localStorage.removeItem("cloak_history");
-                localStorage.removeItem("cloak_bookmarks_v2");
-                localStorage.removeItem("cloak_blocked_sites");
-                localStorage.removeItem("cloak_panic_log");
-                localStorage.removeItem("cloak_notes");
-              }}
-              variant="outline"
-              size="sm"
-              className="text-xs font-mono border-destructive/30 text-destructive hover:bg-destructive/10"
-            >
-              Wipe All Data
-            </Button>
-          </div>
-        </section>
+            </section>
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* Keyboard Shortcuts Modal */}
