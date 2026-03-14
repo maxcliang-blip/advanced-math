@@ -512,3 +512,113 @@ export function emergencyWipe() {
     if (preserve[k] !== undefined) localStorage.setItem(k, preserve[k]);
   });
 }
+
+// --- IP & Fingerprint Leakage Detection ---
+
+export function detectIPLeak(): Promise<string | null> {
+  return fetch("https://api.ipify.org?format=json")
+    .then(res => res.json())
+    .then(data => data.ip)
+    .catch(() => null);
+}
+
+export function generateBrowserFingerprint(): string {
+  const fingerprint = {
+    userAgent: navigator.userAgent,
+    language: navigator.language,
+    languages: navigator.languages,
+    screen: {
+      width: screen.width,
+      height: screen.height,
+      colorDepth: screen.colorDepth,
+      pixelDepth: screen.pixelDepth,
+    },
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    hardwareConcurrency: navigator.hardwareConcurrency,
+    deviceMemory: (navigator.deviceMemory as any) || 0,
+    maxTouchPoints: navigator.maxTouchPoints,
+  };
+  const json = JSON.stringify(fingerprint);
+  let hash = 0;
+  for (let i = 0; i < json.length; i++) {
+    const char = json.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(16);
+}
+
+// --- Stealth Mode (hides UI elements) ---
+
+let stealthModeEnabled = false;
+let stealthModeInterval: ReturnType<typeof setInterval> | null = null;
+
+export function enableStealthMode(onTrigger: () => void) {
+  stealthModeEnabled = true;
+  document.body.style.opacity = "0.95";
+
+  stealthModeInterval = setInterval(() => {
+    if (document.hidden) {
+      onTrigger();
+      disableStealthMode();
+    }
+  }, 500);
+}
+
+export function disableStealthMode() {
+  stealthModeEnabled = false;
+  document.body.style.opacity = "1";
+  if (stealthModeInterval) {
+    clearInterval(stealthModeInterval);
+    stealthModeInterval = null;
+  }
+}
+
+export function isStealthModeActive(): boolean {
+  return stealthModeEnabled;
+}
+
+// --- Network Activity Monitor ---
+
+const NETWORK_LOG_KEY = "cloak_network_log";
+const MAX_NETWORK_ENTRIES = 50;
+
+export interface NetworkEntry {
+  timestamp: number;
+  url: string;
+  method: string;
+  status?: number;
+}
+
+export function logNetworkActivity(url: string, method = "GET", status?: number) {
+  const log = getNetworkLog();
+  log.unshift({ timestamp: Date.now(), url, method, status });
+  localStorage.setItem(NETWORK_LOG_KEY, JSON.stringify(log.slice(0, MAX_NETWORK_ENTRIES)));
+}
+
+export function getNetworkLog(): NetworkEntry[] {
+  try {
+    return JSON.parse(localStorage.getItem(NETWORK_LOG_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+export function clearNetworkLog() {
+  localStorage.removeItem(NETWORK_LOG_KEY);
+}
+
+// --- Anti-Replay Attack ---
+
+const LAST_ACTION_KEY = "cloak_last_action";
+const ACTION_COOLDOWN = 100; // ms
+
+export function canPerformAction(): boolean {
+  const lastAction = parseInt(localStorage.getItem(LAST_ACTION_KEY) || "0");
+  const now = Date.now();
+  if (now - lastAction < ACTION_COOLDOWN) {
+    return false;
+  }
+  localStorage.setItem(LAST_ACTION_KEY, String(now));
+  return true;
+}

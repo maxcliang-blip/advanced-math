@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ProfileSection from "@/components/ProfileSection";
 import SecuritySection from "@/components/SecuritySection";
+import AdvancedSecurityPanel from "@/components/AdvancedSecurityPanel";
 import { loadProfile, type UserProfile } from "@/lib/profile";
 import { themes, loadTheme, applyTheme } from "@/lib/themes";
 import { tabPresets, applyCloakPreset, loadActiveCloak, clearCloak, loadCustomPresets, addCustomPreset, removeCustomPreset, type TabPreset } from "@/lib/tabCloak";
@@ -1290,6 +1291,14 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
                 onSecurityChange?.(s);
               }}
             />
+
+            {/* Advanced Security Panel */}
+            <section className="space-y-4 border-t border-border pt-6">
+              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Zap className="h-4 w-4" /> Advanced Monitoring
+              </h2>
+              <AdvancedSecurityPanel onPanic={handlePanicWithLog} />
+            </section>
 
             {/* Panic History Log */}
             <section className="space-y-4 border-t border-border pt-6">
