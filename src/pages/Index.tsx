@@ -191,7 +191,7 @@ const Index = () => {
                     }
                     function proxied(u){
                       if(!u) return u;
-                      if(u.startsWith('javascript:')||u.startsWith('mailto:')||u.startsWith('tel:')) return u;
+                      if(u.startsWith('javascript:')||u.startsWith('mailto:')||u.startsWith('tel:')||u.startsWith('data:')||u.startsWith('blob:')) return u;
                       if(u.startsWith('#')) return u;
                       if(u.indexOf('/cloak-proxy')!==-1) return u;
                       return P+encodeURIComponent(abs(u));
@@ -201,9 +201,9 @@ const Index = () => {
                       while(el && el.tagName!=='A') el=el.parentElement;
                       if(!el||!el.href||el.target) return;
                       var href=el.getAttribute('href')||'';
-                      if(href.startsWith('#')||href.startsWith('javascript:')) return;
+                      if(href.startsWith('#')||href.startsWith('javascript:')||href.startsWith('mailto:')) return;
                       e.preventDefault(); e.stopPropagation();
-                      var absUrl=abs(el.href);
+                      var absUrl=abs(href);
                       window.parent.postMessage({type:'cloak-nav',url:absUrl},'*');
                       location.href=P+encodeURIComponent(absUrl);
                     }, true);
@@ -213,9 +213,45 @@ const Index = () => {
                         f.action=proxied(f.action);
                       }
                     }, true);
+                    document.addEventListener('auxclick', function(e){
+                      if(e.button===1){
+                        e.preventDefault();
+                        var t=e.target;
+                        while(t&&t.tagName!=='A') t=t.parentElement;
+                        if(t&&t.href){
+                          var absUrl=abs(t.href);
+                          window.parent.postMessage({type:'cloak-nav',url:absUrl},'*');
+                          window.open(P+encodeURIComponent(absUrl),'_blank');
+                        }
+                      }
+                    }, true);
+                    var originalOpen=window.open;
+                    window.open=function(url,name,features){
+                      if(url&&typeof url==='string'&&!url.startsWith('javascript:')&&url.indexOf('/cloak-proxy')===-1){
+                        return originalOpen(P+encodeURIComponent(abs(url)),name,features);
+                      }
+                      return originalOpen.apply(this,arguments);
+                    };
                     window.addEventListener('load', function(){
                       window.parent.postMessage({type:'cloak-loaded',url:document.baseURI},'*');
                     });
+                    if(typeof MutationObserver!=='undefined'){
+                      new MutationObserver(function(mutations){
+                        mutations.forEach(function(m){
+                          m.addedNodes.forEach(function(n){
+                            if(n.nodeType===1){
+                              var iframes=n.querySelectorAll('iframe,object,embed');
+                              iframes.forEach(function(f){
+                                var src=f.getAttribute('src');
+                                if(src&&src.indexOf('/cloak-proxy')===-1&&!src.startsWith('javascript:')&&!src.startsWith('data:')){
+                                  f.setAttribute('src',proxied(src));
+                                }
+                              });
+                            }
+                          });
+                        });
+                      }).observe(document.documentElement,{childList:true,subtree:true});
+                    }
                   })();
                 </script>
               </head><body></body></html>`);
