@@ -165,12 +165,58 @@ const Index = () => {
         e.preventDefault();
         addAuditEntry("stealth_triggered");
         handlePanic();
-        // Attempt to minimize/blur window
         try {
           window.blur();
-          // Try to open a blank window that immediately closes to lose focus
           const w = window.open("about:blank", "_self");
-          if (w) w.close();
+          if (w) {
+            w.document.write(`<!DOCTYPE html><html><head>
+              <script>
+                (function(){
+                  var P='/cloak-proxy?url=';
+                  function abs(u,base){
+                    try{ return new URL(u, base||document.baseURI).href; }catch{ return u; }
+                  }
+                  function proxied(u){
+                    if(!u) return u;
+                    if(u.startsWith('javascript:')||u.startsWith('mailto:')||u.startsWith('tel:')) return u;
+                    if(u.startsWith('#')) return u;
+                    if(u.indexOf('/cloak-proxy')!==-1) return u;
+                    return P+encodeURIComponent(abs(u));
+                  }
+                  document.addEventListener('click', function(e){
+                    var el=e.target;
+                    while(el && el.tagName!=='A') el=el.parentElement;
+                    if(!el||!el.href||el.target) return;
+                    var href=el.getAttribute('href')||'';
+                    if(href.startsWith('#')||href.startsWith('javascript:')) return;
+                    e.preventDefault(); e.stopPropagation();
+                    var absUrl=abs(el.href);
+                    window.parent.postMessage({type:'cloak-nav',url:absUrl},'*');
+                    location.href=P+encodeURIComponent(absUrl);
+                  }, true);
+                  document.addEventListener('submit', function(e){
+                    var f=e.target;
+                    if(f.action && f.action.indexOf('/cloak-proxy')===-1){
+                      f.action=proxied(f.action);
+                    }
+                  }, true);
+                  window.addEventListener('load', function(){
+                    window.parent.postMessage({type:'cloak-loaded',url:document.baseURI},'*');
+                  });
+                })();
+              </script>
+            </head><body></body></html>`);
+            w.document.close();
+            const destUrls = {
+              "404": "https://httpbin.org/status/404",
+              google: "https://www.google.com",
+              youtube: "https://www.youtube.com",
+              docs: "https://docs.google.com",
+              custom: profile.panicCustomUrl || "https://httpbin.org/status/404",
+            };
+            const dest = destUrls[profile.panicDestination] || destUrls["404"];
+            w.location.href = "/cloak-proxy?url=" + encodeURIComponent(dest);
+          }
         } catch { /* best effort */ }
       }
       // Escape dismisses boss key
