@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Save, Timer, Zap, Monitor } from "lucide-react";
+import { User, Save, Timer, Zap, Monitor, Globe } from "lucide-react";
 import { loadProfile, saveProfile, type UserProfile, type PanicDestination, type BossKeyStyle } from "@/lib/profile";
 
 interface ProfileSectionProps {
@@ -211,6 +211,44 @@ const ProfileSection = ({ onProfileChange }: ProfileSectionProps) => {
             data-testid="input-boss-key-url"
           />
         )}
+      </div>
+
+      {/* Proxy mode toggle */}
+      <div className="space-y-2">
+        <label className="text-xs text-muted-foreground flex items-center gap-1">
+          <Globe className="h-3 w-3" /> Stealth Proxy Mode
+        </label>
+        <p className="text-xs text-muted-foreground">
+          Bypasses iframe restrictions by injecting a navigation script. Disable for direct navigation (faster but may fail on sites with X-Frame-Options).
+        </p>
+        <div className="flex gap-2">
+          <Button
+            variant={profile.useProxyMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => setProfile((p) => ({ ...p, useProxyMode: true }))}
+            className={
+              profile.useProxyMode
+                ? "text-xs font-mono bg-primary text-primary-foreground"
+                : "text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"
+            }
+            data-testid="proxy-mode-on"
+          >
+            Proxy (Bypass)
+          </Button>
+          <Button
+            variant={!profile.useProxyMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => setProfile((p) => ({ ...p, useProxyMode: false }))}
+            className={
+              !profile.useProxyMode
+                ? "text-xs font-mono bg-primary text-primary-foreground"
+                : "text-xs font-mono border-border text-muted-foreground hover:text-foreground hover:border-primary hover:bg-secondary"
+            }
+            data-testid="proxy-mode-off"
+          >
+            Direct
+          </Button>
+        </div>
       </div>
 
       <Button
