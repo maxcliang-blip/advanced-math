@@ -93,8 +93,7 @@ export function addAuditEntry(type: string, detail?: string) {
     detail,
     timestamp: Date.now(),
   };
-  
-  const currentLog = getAuditLog();
+    const currentLog = getAuditLog();
   const updatedLog = [...currentLog, entry];
   
   localStorage.setItem("cloak_audit_log", JSON.stringify(updatedLog));
@@ -170,9 +169,7 @@ export function clearFailedAttempts() {
   localStorage.removeItem(FAILED_ATTEMPTS_KEY);
 }
 
-// ==================== SECURITY SETTINGS ====================
-
-export function loadSecuritySettings(): SecuritySettings {
+// ==================== SECURITY SETTINGS ====================export function loadSecuritySettings(): SecuritySettings {
   try {
     const stored = JSON.parse(localStorage.getItem(SECURITY_KEY) || "{}");
     return { ...defaults, ...stored };
@@ -342,8 +339,7 @@ export function disablePrintDisable() {
     return false;
   });
   
-  // Note: Can't fully restore print without storing original
-}
+  // Note: Can't fully restore print without storing original}
 
 // ==================== TEXT SELECTION DISABLE ====================
 
@@ -413,9 +409,7 @@ export function scrambleHistory() {
   });
 }
 
-// ==================== CLIPBOARD PROTECTION ====================
-
-let clipboardInterval: ReturnType<typeof setInterval> | null = null;
+// ==================== CLIPBOARD PROTECTION ====================let clipboardInterval: ReturnType<typeof setInterval> | null = null;
 
 export function enableClipboardProtection() {
   if (clipboardInterval) return;
@@ -554,8 +548,7 @@ export function enableWebRTCLeakPrevention() {
 
 export function disableWebRTCLeakPrevention() {
   webRTCBlocked = false;
-  // Note: Full restoration requires page reload
-}
+  // Note: Full restoration requires page reload}
 
 // ==================== GEOLOCATION SPOOFING ====================
 
@@ -564,8 +557,7 @@ let geolocationInterval: ReturnType<typeof setInterval> | null = null;
 
 export function enableGeolocationSpoofing() {
   if (geolocationSpoofingEnabled) return;
-  
-  const spoofedPosition = {
+    const spoofedPosition = {
     coords: {
       latitude: 40.7128 + (Math.random() - 0.5) * 10,
       longitude: -74.0060 + (Math.random() - 0.5) * 10,
@@ -595,8 +587,7 @@ export function enableGeolocationSpoofing() {
       spoofedPosition.coords.latitude += (Math.random() - 0.5) * 0.1;
       spoofedPosition.coords.longitude += (Math.random() - 0.5) * 0.1;
     }, 30000);
-    
-    geolocationSpoofingEnabled = true;
+        geolocationSpoofingEnabled = true;
   } catch (e) {
     console.warn("Geolocation spoofing failed:", e);
   }
@@ -692,8 +683,7 @@ let apiRestrictionsEnabled = false;
 
 export function enableBrowserAPIRestrictions() {
   if (apiRestrictionsEnabled) return;
-  
-  try {
+    try {
     Object.defineProperty(window, 'performance', {
       get: () => undefined,
       configurable: true,
@@ -843,5 +833,5 @@ export {
   disableMemoryDumpProtection,
   enableTimingAttackPrevention,
   disableTimingAttackPrevention,
-  detectScreenRecording,
+  // detectScreenRecording is exported only once below
 };
