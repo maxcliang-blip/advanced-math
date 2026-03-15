@@ -843,5 +843,4 @@ export {
   disableMemoryDumpProtection,
   enableTimingAttackPrevention,
   disableTimingAttackPrevention,
-  detectScreenRecording,
 };
