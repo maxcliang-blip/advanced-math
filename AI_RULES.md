@@ -1,19 +1,14 @@
-# AI_RULES.md — Development Guidelines for CLOAK
-
-## Tech Stack
+# AI_RULES.md — Development Guidelines for CLOAK## Tech Stack
 
 - **React 18 + TypeScript** — Component-based UI with static typing
 - **Vite** — Fast build tool and dev server with HMR
-- **Tailwind CSS** — Utility-first CSS framework
-- **shadcn/ui** — Pre-built accessible UI components (Radix UI primitives)
+- **Tailwind CSS** — Utility-first CSS framework- **shadcn/ui** — Pre-built accessible UI components (Radix UI primitives)
 - **React Router v6** — Client-side routing
 - **TanStack React Query** — Server state management, caching, and synchronization
 - **React Hook Form + Zod** — Form handling and validation
 - **Lucide React** — Consistent icon library
 - **Vitest + Testing Library** — Unit and component testing
-- **ESLint** — Code quality and consistency
-
-## Library Usage Rules
+- **ESLint** — Code quality and consistency## Library Usage Rules
 
 ### 1. UI Components
 - **Always** use shadcn/ui components when available. They are built on Radix UI and provide accessibility out of the box.
@@ -120,8 +115,7 @@ import type { UserProfile } from "@/lib/profile";
 - **Interfaces/Types**: PascalCase (`UserProfile`, `SecuritySettings`)
 - **Constants**: SCREAMING_SNAKE_CASE for config values, camelCase otherwise
 
-### 17. Git Workflow
-- Make small, focused commits with clear messages.
+### 17. Git Workflow- Make small, focused commits with clear messages.
 - Test your changes locally before pushing.
 - Follow the existing code style and conventions.
 
