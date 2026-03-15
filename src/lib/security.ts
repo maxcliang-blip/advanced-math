@@ -21,6 +21,7 @@ export interface SecuritySettings {
   keystrokePatternLock: boolean;
   stealthModeEnabled: boolean;
   stealthModeKey: string;
+  enableScreenRecordingDetection: boolean;
 }
 
 const SECURITY_KEY = "cloak_security_settings";
@@ -50,6 +51,7 @@ const defaults: SecuritySettings = {
   keystrokePatternLock: false,
   stealthModeEnabled: false,
   stealthModeKey: "h",
+  enableScreenRecordingDetection: false,
 };
 
 export function loadSecuritySettings(): SecuritySettings {
@@ -391,6 +393,63 @@ export function disableIframeDetection() {
   }
 }
 
+// --- Screen Recording Detection ---
+
+let screenRecordingInterval: ReturnType<typeof setInterval> | null = null;
+let previousVideoElement: HTMLVideoElement | null = null;
+
+export function enableScreenRecordingDetection(onPanic: () => void) {
+  const checkRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.stop();
+        onPanic();
+      }
+    } catch {
+      // getDisplayMedia throws if user cancels, but also throws when already recording
+      // Check for existing display capture
+      const tracks = (navigator.mediaDevices as any).getSupportedConstraints?.() || {};
+      if (navigator.mediaDevices) {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const displayDevices = devices.filter(d => d.kind === 'videoinput' && (d.label?.toLowerCase().includes('screen') || d.label?.toLowerCase().includes('display')));
+          if (displayDevices.length > 0) {
+            onPanic();
+          }
+        } catch { /* ignore */ }
+      }
+    }
+  };
+
+  const pollVideoElements = () => {
+    const videos = document.querySelectorAll('video');
+    videos.forEach(video => {
+      if (video && video.srcObject) {
+        const tracks = (video.srcObject as MediaStream).getTracks();
+        const displayTracks = tracks.filter(t => t.kind === 'video' && (t as any).label?.toLowerCase().includes('screen'));
+        if (displayTracks.length > 0) {
+          onPanic();
+        }
+      }
+    });
+  };
+
+  checkRecording();
+  screenRecordingInterval = setInterval(pollVideoElements, 2000);
+}
+
+export function disableScreenRecordingDetection() {
+  if (screenRecordingInterval) {
+    clearInterval(screenRecordingInterval);
+    screenRecordingInterval = null;
+  }
+  if (previousVideoElement) {
+    previousVideoElement = null;
+  }
+}
+
 // --- History scramble (call on panic) ---
 
 export function scrambleHistory(steps = 8) {
@@ -474,7 +533,8 @@ export type AuditEventType =
   | "unlock" | "lock" | "panic" | "failed_attempt" 
   | "decoy_used" | "emergency_wipe" | "session_timeout"
   | "stealth_triggered" | "pattern_unlock" | "pattern_fail"
-  | "devtools_detected" | "tab_switch_lock" | "mouse_leave_lock" | "window_blur_lock";
+  | "devtools_detected" | "tab_switch_lock" | "mouse_leave_lock" | "window_blur_lock"
+  | "screen_recording_detected";
 
 export interface AuditEntry {
   type: AuditEventType;

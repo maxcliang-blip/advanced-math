@@ -6,7 +6,7 @@ import {
   TriangleAlert as AlertTriangle, Activity, Ban,
   MousePointerClick, TabletSmartphone, Bomb, Trash2, KeyRound,
   LogOut, BluetoothOff, Printer, Type, Frame, History,
-  Fingerprint, Ghost, ScrollText
+  Fingerprint, Ghost, ScrollText, MonitorOff
 } from "lucide-react";
 import {
   loadSecuritySettings,
@@ -395,6 +395,13 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
           label="Anti-Framing (Iframe Detection)"
           description="Triggers panic if CLOAK is embedded inside another page (clickjacking)"
           settingKey="iframeDetection"
+        />
+
+        <ToggleRow
+          icon={<MonitorOff className="h-4 w-4 text-primary" />}
+          label="Screen Recording Detection"
+          description="Triggers panic if screen recording or capture is detected (OBS, QuickTime, etc.)"
+          settingKey="enableScreenRecordingDetection"
         />
 
         <ToggleRow

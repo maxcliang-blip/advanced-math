@@ -29,6 +29,8 @@ import {
   disableTextSelectionDisable,
   enableIframeDetection,
   disableIframeDetection,
+  enableScreenRecordingDetection,
+  disableScreenRecordingDetection,
   scrambleHistory,
   wipeClipboard,
   addAuditEntry,
@@ -105,6 +107,7 @@ const Index = () => {
     if (securitySettings.disablePrinting)      enablePrintDisable();         else disablePrintDisable();
     if (securitySettings.disableTextSelection) enableTextSelectionDisable(); else disableTextSelectionDisable();
     if (securitySettings.iframeDetection)      enableIframeDetection(handlePanic); else disableIframeDetection();
+    if (securitySettings.enableScreenRecordingDetection) enableScreenRecordingDetection(handlePanic); else disableScreenRecordingDetection();
 
     return () => {
       disableDevToolsBlock();
@@ -116,6 +119,7 @@ const Index = () => {
       disablePrintDisable();
       disableTextSelectionDisable();
       disableIframeDetection();
+      disableScreenRecordingDetection();
     };
   }, [state, securitySettings, handlePanic]);
 
