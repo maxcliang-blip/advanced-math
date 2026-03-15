@@ -578,13 +578,113 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
           <title>${tabTitle}</title>
           <link rel="icon" href="${tabIcon}">
           <style>
-            * { margin: 0; padding: 0; }
-            body { overflow: hidden; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { overflow: hidden; font-family: system-ui, sans-serif; }
             iframe { width: 100vw; height: 100vh; border: none; }
+            .bypass-bar {
+              position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+              background: #1a1a2e; color: #e0e0e0; padding: 6px 16px;
+              display: none; align-items: center; justify-content: space-between;
+              font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            }
+            .bypass-bar.visible { display: flex; }
+            .bypass-bar button {
+              background: #4361ee; color: #fff; border: none; padding: 4px 14px;
+              border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 8px;
+            }
+            .bypass-bar button:hover { background: #3a56d4; }
+            .bypass-bar button.close-btn { background: #555; }
+            .bypass-bar button.close-btn:hover { background: #666; }
+            body.bypassed iframe { display: none; }
+            body.bypassed .bypass-frame { display: block; }
+            .bypass-frame { display: none; width: 100vw; height: 100vh; border: none; }
           </style>
         </head>
         <body>
-          <iframe src="${target}" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+          <div class="bypass-bar" id="bypassBar">
+            <span>⚠️ This site blocked iframe embedding.</span>
+            <div>
+              <button onclick="bypassRestriction()">Open Bypass Mode</button>
+              <button onclick="openDirect()">Open Directly</button>
+              <button class="close-btn" onclick="dismissBar()">✕</button>
+            </div>
+          </div>
+          <iframe id="mainFrame" src="${target}" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"></iframe>
+          <iframe id="bypassFrame" class="bypass-frame"></iframe>
+          <script>
+            var targetUrl = ${JSON.stringify(target)};
+            var mainFrame = document.getElementById('mainFrame');
+            var bypassBar = document.getElementById('bypassBar');
+            var bypassFrame = document.getElementById('bypassFrame');
+
+            // Detect if iframe refused to load
+            mainFrame.addEventListener('load', function() {
+              try {
+                // Try accessing contentDocument - blocked cross-origin frames throw
+                var doc = mainFrame.contentDocument || mainFrame.contentWindow.document;
+                // If we get here and it's empty/blank, the site likely blocked framing
+                if (!doc || !doc.body || doc.body.innerHTML === '') {
+                  showBypassBar();
+                }
+              } catch(e) {
+                // Cross-origin is expected for most sites, not necessarily blocked
+              }
+            });
+
+            mainFrame.addEventListener('error', function() {
+              showBypassBar();
+            });
+
+            // Also detect via a timeout - if the frame is suspiciously empty
+            setTimeout(function() {
+              try {
+                var doc = mainFrame.contentDocument;
+                if (doc && (!doc.body || doc.body.innerHTML.trim() === '')) {
+                  showBypassBar();
+                }
+              } catch(e) { /* cross-origin, likely loaded fine */ }
+            }, 3000);
+
+            function showBypassBar() {
+              bypassBar.classList.add('visible');
+              mainFrame.style.marginTop = '36px';
+              mainFrame.style.height = 'calc(100vh - 36px)';
+            }
+
+            function dismissBar() {
+              bypassBar.classList.remove('visible');
+              mainFrame.style.marginTop = '0';
+              mainFrame.style.height = '100vh';
+            }
+
+            function bypassRestriction() {
+              // Method: fetch the page content and render in a blob/srcdoc frame
+              fetch(targetUrl, { mode: 'cors' })
+                .then(function(r) { return r.text(); })
+                .then(function(html) {
+                  // Inject a <base> tag so relative URLs resolve correctly
+                  var base = '<base href="' + targetUrl + '">';
+                  html = html.replace(/<head([^>]*)>/i, '<head$1>' + base);
+                  // Remove X-Frame-Options / CSP meta tags
+                  html = html.replace(/<meta[^>]*http-equiv\\s*=\\s*["']?content-security-policy["']?[^>]*>/gi, '');
+                  var blob = new Blob([html], { type: 'text/html' });
+                  var blobUrl = URL.createObjectURL(blob);
+                  document.body.classList.add('bypassed');
+                  bypassFrame.src = blobUrl;
+                  bypassFrame.style.marginTop = '36px';
+                  bypassFrame.style.height = 'calc(100vh - 36px)';
+                  dismissBar();
+                })
+                .catch(function() {
+                  // CORS blocked - fall back to opening directly
+                  openDirect();
+                });
+            }
+
+            function openDirect() {
+              window.location.href = targetUrl;
+            }
+          </script>
         </body>
         </html>
       `);
