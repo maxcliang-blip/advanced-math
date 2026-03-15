@@ -112,7 +112,24 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
   const [proxyFullscreen, setProxyFullscreen] = useState(false);
   const [proxyHistory, setProxyHistory] = useState<string[]>([]);
   const [proxyHistoryIndex, setProxyHistoryIndex] = useState(-1);
+  const [proxyMode, setProxyMode] = useState(true); // true = route through /cloak-proxy server
+  const [proxyLoading, setProxyLoading] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Build the actual iframe src — proxy mode routes through backend
+  const buildIframeSrc = (rawUrl: string) =>
+    proxyMode ? `/cloak-proxy?url=${encodeURIComponent(rawUrl)}` : rawUrl;
+
+  // Extract real URL from a proxied iframe URL
+  const extractRealUrl = (iframeSrc: string): string => {
+    try {
+      if (iframeSrc.includes("/cloak-proxy?url=")) {
+        const u = new URL(iframeSrc, window.location.origin);
+        return u.searchParams.get("url") || iframeSrc;
+      }
+    } catch {}
+    return iframeSrc;
+  };
 
   const [editingBookmark, setEditingBookmark] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
@@ -468,6 +485,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
     setProxyUrl(target);
     setProxyInput(target);
     setProxyActive(true);
+    setProxyLoading(true);
     addToHistory(target);
     setProxyHistory((prev) => {
       const newHistory = [...prev.slice(0, proxyHistoryIndex + 1), target];
@@ -482,6 +500,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
       setProxyHistoryIndex(newIndex);
       setProxyUrl(proxyHistory[newIndex]);
       setProxyInput(proxyHistory[newIndex]);
+      setProxyLoading(true);
     }
   };
 
@@ -491,14 +510,54 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
       setProxyHistoryIndex(newIndex);
       setProxyUrl(proxyHistory[newIndex]);
       setProxyInput(proxyHistory[newIndex]);
+      setProxyLoading(true);
     }
   };
 
   const proxyRefresh = () => {
     if (iframeRef.current && proxyUrl) {
-      iframeRef.current.src = proxyUrl;
+      setProxyLoading(true);
+      iframeRef.current.src = buildIframeSrc(proxyUrl);
     }
   };
+
+  // Handle iframe load — update address bar from proxied URL
+  const handleIframeLoad = () => {
+    setProxyLoading(false);
+    try {
+      const iframeLoc = iframeRef.current?.contentWindow?.location;
+      if (iframeLoc) {
+        const currentSrc = iframeLoc.href;
+        const realUrl = extractRealUrl(currentSrc);
+        if (realUrl && realUrl !== proxyUrl && !realUrl.startsWith("about:")) {
+          setProxyUrl(realUrl);
+          setProxyInput(realUrl);
+        }
+      }
+    } catch {}
+  };
+
+  // Listen for postMessages from inside the proxied iframe
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (!e.data) return;
+      if (e.data.type === "cloak-nav" && e.data.url) {
+        const realUrl = e.data.url as string;
+        setProxyUrl(realUrl);
+        setProxyInput(realUrl);
+        setProxyLoading(true);
+      }
+      if (e.data.type === "cloak-loaded" && e.data.url) {
+        const realUrl = extractRealUrl(e.data.url as string);
+        if (realUrl) {
+          setProxyInput(realUrl);
+        }
+        setProxyLoading(false);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
 
   const openCloaked = () => {
     if (!url) return;
@@ -622,13 +681,21 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
             <AlertTriangle className="h-3 w-3" /> PANIC
           </Button>
         </div>
-        <iframe
-          ref={iframeRef}
-          src={proxyUrl}
-          className="flex-1 w-full border-none"
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-          title="Proxy Browser"
-        />
+        <div className="flex-1 relative w-full">
+          {proxyLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 pointer-events-none">
+              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+          <iframe
+            ref={iframeRef}
+            src={buildIframeSrc(proxyUrl)}
+            className="w-full h-full border-none"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+            title="Proxy Browser"
+            onLoad={handleIframeLoad}
+          />
+        </div>
       </div>
     );
   }
@@ -714,6 +781,23 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
                   </Button>
                 </div>
 
+                {/* Proxy mode toggle */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setProxyMode((p) => !p)}
+                  title={proxyMode ? "Proxy mode ON — bypasses X-Frame-Options (click to disable)" : "Proxy mode OFF — direct iframe (click to enable)"}
+                  className={`h-10 px-2 font-mono text-xs gap-1 shrink-0 ${
+                    proxyMode
+                      ? "border-primary text-primary bg-primary/10"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-primary"
+                  }`}
+                  data-testid="toggle-proxy-mode"
+                >
+                  <Shield className="h-3 w-3" />
+                  {proxyMode ? "PROXY" : "DIRECT"}
+                </Button>
+
                 {/* Search engine selector */}
                 <div className="relative">
                   <Button
@@ -770,14 +854,20 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
               </div>
 
               {proxyActive && (
-                <div className="rounded-lg border border-border overflow-hidden bg-background">
+                <div className="rounded-lg border border-border overflow-hidden bg-background relative">
+                  {proxyLoading && (
+                    <div className="absolute top-0 left-0 right-0 z-10 h-0.5 bg-secondary overflow-hidden">
+                      <div className="h-full bg-primary animate-pulse w-full" style={{ animation: "proxy-load 1.5s ease-in-out infinite" }} />
+                    </div>
+                  )}
                   <iframe
                     ref={iframeRef}
-                    src={proxyUrl}
+                    src={buildIframeSrc(proxyUrl)}
                     className="w-full border-none"
                     style={{ height: "60vh" }}
                     sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
                     title="Proxy Browser"
+                    onLoad={handleIframeLoad}
                   />
                 </div>
               )}
@@ -789,7 +879,9 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
                     Enter a URL or search term above to browse
                   </p>
                   <p className="text-xs text-muted-foreground/60">
-                    Note: Some sites may block iframe embedding
+                    {proxyMode
+                      ? "Proxy mode active — bypasses X-Frame-Options and iframe restrictions"
+                      : "Direct mode — fast but some sites may block iframe embedding"}
                   </p>
                 </div>
               )}
