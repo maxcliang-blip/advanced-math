@@ -11,6 +11,7 @@ export interface UserProfile {
   bossKeyStyle: BossKeyStyle;
   bossKeyCustomUrl: string;
   useProxyMode: boolean;
+  customProxyUrl: string;
 }
 
 const STORAGE_KEY = "cloak_profile";
@@ -25,6 +26,7 @@ const defaults: UserProfile = {
   bossKeyStyle: "google",
   bossKeyCustomUrl: "",
   useProxyMode: true,
+  customProxyUrl: "",
 };
 
 export function loadProfile(): UserProfile {

@@ -112,16 +112,23 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
   const [proxyFullscreen, setProxyFullscreen] = useState(false);
   const [proxyHistory, setProxyHistory] = useState<string[]>([]);
   const [proxyHistoryIndex, setProxyHistoryIndex] = useState(-1);
-  const [proxyMode, setProxyMode] = useState(true); // true = route through /cloak-proxy server (X-Frame-Options bypass)
-  const [proxyLoading, setProxyLoading] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  // Proxy mode: true = server proxy, false = direct
+  const [proxyMode, setProxyMode] = useState(() => {
+    return typeof window !== "undefined" && window.location.port === "5000";
+  });
 
-  // UI tabs: "dashboard" or "browser"
-  const [activeView, setActiveView] = useState<"dashboard" | "browser">("dashboard");
-
-  // Build the actual iframe src — proxy mode routes through backend
-  const buildIframeSrc = (rawUrl: string) =>
-    proxyMode ? `/cloak-proxy?url=${encodeURIComponent(rawUrl)}` : rawUrl;
+  const buildIframeSrc = (rawUrl: string) => {
+    if (!proxyMode) return rawUrl;
+    
+    // Use custom proxy URL if set
+    if (profile.customProxyUrl) {
+      const separator = profile.customProxyUrl.includes("?") ? "&" : "?";
+      return `${profile.customProxyUrl}${separator}url=${encodeURIComponent(rawUrl)}`;
+    }
+    
+    // Use built-in server proxy (dev mode only)
+    return `/cloak-proxy?url=${encodeURIComponent(rawUrl)}`;
+  };
 
   // Extract real URL from a proxied iframe URL
   const extractRealUrl = (iframeSrc: string): string => {
@@ -910,7 +917,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
               size="sm"
               onClick={() => setProxyMode(!proxyMode)}
               className="font-mono text-xs"
-              title={proxyMode ? "Proxy ON" : "Proxy OFF"}
+              title={proxyMode ? "Server Proxy ON (X-Frame bypass)" : "Direct mode (no proxy)"}
             >
               {proxyMode ? "Proxy" : "Direct"}
             </Button>

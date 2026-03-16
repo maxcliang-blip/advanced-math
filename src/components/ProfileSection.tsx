@@ -257,6 +257,49 @@ const ProfileSection = ({ onProfileChange }: ProfileSectionProps) => {
             Direct
           </Button>
         </div>
+        
+        {/* Custom Proxy URL */}
+        <div className="mt-3 p-3 rounded-lg border border-border bg-secondary/30">
+          <label className="text-xs text-muted-foreground block mb-1">
+            Custom Proxy URL (optional)
+          </label>
+          <p className="text-[10px] text-muted-foreground mb-2">
+            Deploy a proxy or use a preset below
+          </p>
+          <div className="flex flex-wrap gap-1 mb-2">
+            <Button
+              variant={profile.customProxyUrl === "" ? "default" : "outline"}
+              size="sm"
+              className="text-xs"
+              onClick={() => setProfile((p) => ({ ...p, customProxyUrl: "" }))}
+            >
+              None
+            </Button>
+            <Button
+              variant={profile.customProxyUrl === "https://api.allorigins.win/raw?url=" ? "default" : "outline"}
+              size="sm"
+              className="text-xs"
+              onClick={() => setProfile((p) => ({ ...p, customProxyUrl: "https://api.allorigins.win/raw?url=" }))}
+            >
+              AllOrigins
+            </Button>
+            <Button
+              variant={profile.customProxyUrl === "https://corsproxy.io/?url=" ? "default" : "outline"}
+              size="sm"
+              className="text-xs"
+              onClick={() => setProfile((p) => ({ ...p, customProxyUrl: "https://corsproxy.io/?url=" }))}
+            >
+              CorsProxy
+            </Button>
+          </div>
+          <Input
+            type="text"
+            value={profile.customProxyUrl || ""}
+            onChange={(e) => setProfile((p) => ({ ...p, customProxyUrl: e.target.value }))}
+            placeholder="https://your-proxy.example.com/proxy?url="
+            className="text-xs font-mono h-8"
+          />
+        </div>
       </div>
 
       <Button
