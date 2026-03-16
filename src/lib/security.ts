@@ -47,6 +47,12 @@ export interface SecuritySettings {
   fakeFavicon: string;
 }
 
+export interface AuditEntry {
+  type: string;
+  detail?: string;
+  timestamp: number;
+}
+
 export interface NetworkEntry {
   url: string;
   method: string;
