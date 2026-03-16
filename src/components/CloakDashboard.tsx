@@ -112,9 +112,12 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
   const [proxyFullscreen, setProxyFullscreen] = useState(false);
   const [proxyHistory, setProxyHistory] = useState<string[]>([]);
   const [proxyHistoryIndex, setProxyHistoryIndex] = useState(-1);
-  const [proxyMode, setProxyMode] = useState(false); // false = direct URL (works on GitHub Pages), true = route through /cloak-proxy server
+  const [proxyMode, setProxyMode] = useState(false);
   const [proxyLoading, setProxyLoading] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // UI tabs: "dashboard" or "browser"
+  const [activeView, setActiveView] = useState<"dashboard" | "browser">("dashboard");
 
   // Build the actual iframe src — proxy mode routes through backend
   const buildIframeSrc = (rawUrl: string) =>
@@ -811,6 +814,27 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
           <h1 className="text-xl font-display font-bold text-primary glow-text">
             CLOAK
           </h1>
+          
+          {/* View Tabs */}
+          <div className="flex items-center gap-1 ml-4 bg-secondary/50 rounded-lg p-1">
+            <Button
+              variant={activeView === "dashboard" ? "default" : "ghost"}
+              size="sm"
+              className="font-mono text-xs"
+              onClick={() => setActiveView("dashboard")}
+            >
+              Dashboard
+            </Button>
+            <Button
+              variant={activeView === "browser" ? "default" : "ghost"}
+              size="sm"
+              className="font-mono text-xs"
+              onClick={() => setActiveView("browser")}
+            >
+              Browser
+            </Button>
+          </div>
+          
           <span className="text-xs font-mono text-muted-foreground ml-2">
             Welcome, {profile.displayName}
           </span>
@@ -852,6 +876,71 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
         </div>
       </header>
 
+      {/* Browser View */}
+      {activeView === "browser" && (
+        <main className="flex-1 flex flex-col">
+          {/* Browser toolbar */}
+          <div className="border-b border-border px-4 py-2 flex items-center gap-2 bg-secondary/30">
+            <Button variant="ghost" size="sm" onClick={proxyGoBack} disabled={proxyHistoryIndex <= 0} className="h-8">
+              ←
+            </Button>
+            <Button variant="ghost" size="sm" onClick={proxyGoForward} disabled={proxyHistoryIndex >= proxyHistory.length - 1} className="h-8">
+              →
+            </Button>
+            <Button variant="ghost" size="sm" onClick={proxyRefresh} className="h-8">
+              ↻
+            </Button>
+            <form onSubmit={(e) => { e.preventDefault(); navigateProxy(); }} className="flex-1 flex items-center gap-2">
+              <div className="flex-1 bg-background border border-border rounded-full px-4 py-1.5 flex items-center gap-2">
+                {proxyLoading && <span className="animate-spin">◌</span>}
+                <input
+                  type="text"
+                  value={proxyInput}
+                  onChange={(e) => setProxyInput(e.target.value)}
+                  placeholder="Enter URL or search..."
+                  className="bg-transparent outline-none flex-1 text-sm"
+                />
+              </div>
+              <Button type="submit" size="sm" className="rounded-full">
+                Go
+              </Button>
+            </form>
+            <Button
+              variant={proxyMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => setProxyMode(!proxyMode)}
+              className="font-mono text-xs"
+              title={proxyMode ? "Proxy ON" : "Proxy OFF"}
+            >
+              {proxyMode ? "Proxy" : "Direct"}
+            </Button>
+          </div>
+          
+          {/* Browser iframe */}
+          <div className="flex-1 bg-white relative">
+            {proxyActive && proxyUrl ? (
+              <iframe
+                ref={iframeRef}
+                src={buildIframeSrc(proxyUrl)}
+                onLoad={handleIframeLoad}
+                className="w-full h-full border-none"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <Globe className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Enter a URL to browse</p>
+                  <p className="text-sm">Use the address bar above or click a bookmark</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
+      )}
+
+      {/* Dashboard View */}
+      {activeView === "dashboard" && (
       <main className="flex-1 p-6 max-w-3xl mx-auto w-full">
         <Tabs defaultValue="browse" className="w-full">
           <TabsList className="w-full grid grid-cols-4 mb-6 bg-secondary">
@@ -1605,6 +1694,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
           </TabsContent>
         </Tabs>
       </main>
+      )}
 
       {/* Keyboard Shortcuts Modal */}
       {showShortcuts && (

@@ -5,6 +5,10 @@ import Fake404 from "@/components/Fake404";
 import FakeGoogle from "@/components/FakeGoogle";
 import FakeYouTube from "@/components/FakeYouTube";
 import FakeGoogleDocs from "@/components/FakeGoogleDocs";
+import FakeFacebook from "@/components/FakeFacebook";
+import FakeTwitter from "@/components/FakeTwitter";
+import FakeReddit from "@/components/FakeReddit";
+import FakeGmail from "@/components/FakeGmail";
 import BossKeyOverlay from "@/components/BossKeyOverlay";
 import { loadProfile, type UserProfile } from "@/lib/profile";
 import {
@@ -35,6 +39,12 @@ import {
   disableReferrerControl,
   enableCanvasProtection,
   disableCanvasProtection,
+  enableURLBarObfuscation,
+  disableURLBarObfuscation,
+  enableNavigatorSpoofing,
+  disableNavigatorSpoofing,
+  enableTabCloaking,
+  disableTabCloaking,
   scrambleHistory,
   wipeClipboard,
   addAuditEntry,
@@ -114,6 +124,21 @@ const Index = () => {
     if (securitySettings.enableScreenRecordingDetection) enableScreenRecordingDetection(handlePanic); else disableScreenRecordingDetection();
     if (securitySettings.referrerControl !== "none") enableReferrerControl(securitySettings.referrerControl as "strip" | "origin"); else disableReferrerControl();
     if (securitySettings.enableCanvasProtection) enableCanvasProtection(); else disableCanvasProtection();
+    if (securitySettings.enableURLBarObfuscation) enableURLBarObfuscation(securitySettings.fakeURL); else disableURLBarObfuscation();
+    if (securitySettings.enableNavigatorSpoofing) {
+      enableNavigatorSpoofing({
+        userAgent: securitySettings.spoofedUserAgent,
+        platform: securitySettings.spoofedPlatform,
+        language: securitySettings.spoofedLanguage,
+      });
+    } else {
+      disableNavigatorSpoofing();
+    }
+    if (securitySettings.enableTabCloaking) {
+      enableTabCloaking(securitySettings.fakeTitle, securitySettings.fakeFavicon);
+    } else {
+      disableTabCloaking();
+    }
 
     return () => {
       disableDevToolsBlock();
@@ -128,6 +153,9 @@ const Index = () => {
       disableScreenRecordingDetection();
       disableReferrerControl();
       disableCanvasProtection();
+      disableURLBarObfuscation();
+      disableNavigatorSpoofing();
+      disableTabCloaking();
     };
   }, [state, securitySettings, handlePanic]);
 
@@ -286,6 +314,10 @@ const Index = () => {
     if (dest === "google")  return <FakeGoogle onReveal={() => setState("gate")} />;
     if (dest === "youtube") return <FakeYouTube onReveal={() => setState("gate")} />;
     if (dest === "docs")    return <FakeGoogleDocs onReveal={() => setState("gate")} />;
+    if (dest === "facebook") return <FakeFacebook onReveal={() => setState("gate")} />;
+    if (dest === "twitter") return <FakeTwitter onReveal={() => setState("gate")} />;
+    if (dest === "reddit") return <FakeReddit onReveal={() => setState("gate")} />;
+    if (dest === "gmail")  return <FakeGmail onReveal={() => setState("gate")} />;
     return <Fake404 onReveal={() => setState("gate")} />;
   };
 

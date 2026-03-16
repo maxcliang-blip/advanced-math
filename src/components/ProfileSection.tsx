@@ -8,13 +8,17 @@ interface ProfileSectionProps {
   onProfileChange?: (profile: UserProfile) => void;
 }
 
-const disguiseOptions = ["Google", "Google Docs", "Canvas", "Wikipedia"];
+const disguiseOptions = ["Google", "YouTube", "Google Docs", "Facebook", "Twitter", "Reddit", "Gmail", "Canvas", "Wikipedia", "404"];
 
 const PANIC_DESTINATIONS: { value: PanicDestination; label: string; desc: string }[] = [
   { value: "404",     label: "Broken Page",   desc: "ERR_EMPTY_RESPONSE chrome error" },
   { value: "google",  label: "Google",        desc: "Google homepage" },
   { value: "youtube", label: "YouTube",       desc: "YouTube video page" },
   { value: "docs",    label: "Google Docs",   desc: "Blank document" },
+  { value: "facebook", label: "Facebook",     desc: "Facebook homepage" },
+  { value: "twitter",  label: "Twitter/X",     desc: "Twitter feed" },
+  { value: "reddit",   label: "Reddit",        desc: "Reddit home" },
+  { value: "gmail",    label: "Gmail",         desc: "Email inbox" },
   { value: "custom",  label: "Custom URL",    desc: "Any URL (opens in redirect)" },
 ];
 
@@ -22,6 +26,10 @@ const BOSS_KEY_STYLES: { value: BossKeyStyle; label: string }[] = [
   { value: "google",  label: "Google" },
   { value: "youtube", label: "YouTube" },
   { value: "docs",    label: "Google Docs" },
+  { value: "facebook", label: "Facebook" },
+  { value: "twitter",  label: "Twitter/X" },
+  { value: "reddit",   label: "Reddit" },
+  { value: "gmail",    label: "Gmail" },
   { value: "404",     label: "Broken Page" },
   { value: "custom",  label: "Custom URL" },
 ];

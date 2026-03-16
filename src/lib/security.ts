@@ -31,12 +31,20 @@ export interface SecuritySettings {
   restrictBrowserAPIs: boolean;
   antiMemoryDump: boolean;
   timingAttackPrevention: boolean;
-}
-
-export interface AuditEntry {
-  type: string;
-  detail?: string;
-  timestamp: number;
+  referrerControl: "strip" | "origin" | "none";
+  enableCanvasProtection: boolean;
+  // URL Bar Obfuscation
+  enableURLBarObfuscation: boolean;
+  fakeURL: string;
+  // Navigator Spoofing
+  enableNavigatorSpoofing: boolean;
+  spoofedUserAgent: string;
+  spoofedPlatform: string;
+  spoofedLanguage: string;
+  // Tab Cloaking
+  enableTabCloaking: boolean;
+  fakeTitle: string;
+  fakeFavicon: string;
 }
 
 export interface NetworkEntry {
@@ -88,6 +96,20 @@ const defaults: SecuritySettings = {
   restrictBrowserAPIs: false,
   antiMemoryDump: false,
   timingAttackPrevention: false,
+  referrerControl: "none",
+  enableCanvasProtection: false,
+  // URL Bar Obfuscation
+  enableURLBarObfuscation: false,
+  fakeURL: "https://www.google.com",
+  // Navigator Spoofing
+  enableNavigatorSpoofing: false,
+  spoofedUserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  spoofedPlatform: "Win32",
+  spoofedLanguage: "en-US",
+  // Tab Cloaking
+  enableTabCloaking: false,
+  fakeTitle: "Google",
+  fakeFavicon: "",
 };
 
 // ==================== AUDIT LOGGING ====================
@@ -1394,4 +1416,209 @@ export function wipeClipboard() {
   try {
     navigator.clipboard.writeText("");
   } catch {}
+}
+
+// ==================== URL BAR OBFUSCATION ====================
+
+let urlObfuscationEnabled = false;
+let originalURL = "";
+
+export function enableURLBarObfuscation(fakeUrl: string) {
+  if (urlObfuscationEnabled) return;
+  
+  try {
+    originalURL = window.location.href;
+    const url = new URL(fakeUrl);
+    history.replaceState({}, "", url.pathname + url.search);
+    urlObfuscationEnabled = true;
+  } catch (e) {
+    console.warn("URL bar obfuscation failed:", e);
+  }
+}
+
+export function updateObfuscatedURL(fakeUrl: string) {
+  if (!urlObfuscationEnabled) return;
+  
+  try {
+    const url = new URL(fakeUrl);
+    history.replaceState({}, "", url.pathname + url.search);
+  } catch (e) {
+    console.warn("URL update failed:", e);
+  }
+}
+
+export function disableURLBarObfuscation() {
+  if (!urlObfuscationEnabled) return;
+  
+  try {
+    history.replaceState({}, "", originalURL);
+    urlObfuscationEnabled = false;
+  } catch (e) {
+    console.warn("URL bar deobfuscation failed:", e);
+  }
+}
+
+// ==================== NAVIGATOR SPOOFING ====================
+
+let navigatorSpoofingEnabled = false;
+let originalNavigator: Navigator = {} as Navigator;
+
+export function enableNavigatorSpoofing(settings: {
+  userAgent?: string;
+  platform?: string;
+  language?: string;
+}) {
+  if (navigatorSpoofingEnabled) return;
+  
+  try {
+    originalNavigator = { ...navigator };
+    
+    const nav = navigator as Navigator & {
+      userAgent: string;
+      platform: string;
+      language: string;
+      languages: string[];
+    };
+    
+    if (settings.userAgent) {
+      Object.defineProperty(nav, 'userAgent', {
+        get: () => settings.userAgent!,
+        configurable: true,
+      });
+    }
+    
+    if (settings.platform) {
+      Object.defineProperty(nav, 'platform', {
+        get: () => settings.platform!,
+        configurable: true,
+      });
+    }
+    
+    if (settings.language) {
+      Object.defineProperty(nav, 'language', {
+        get: () => settings.language!,
+        configurable: true,
+      });
+      
+      Object.defineProperty(nav, 'languages', {
+        get: () => [settings.language!, 'en'],
+        configurable: true,
+      });
+    }
+    
+    navigatorSpoofingEnabled = true;
+  } catch (e) {
+    console.warn("Navigator spoofing failed:", e);
+  }
+}
+
+export function disableNavigatorSpoofing() {
+  if (!navigatorSpoofingEnabled) return;
+  
+  try {
+    const nav = navigator as Navigator & { userAgent: string; platform: string; language: string };
+    
+    Object.defineProperty(nav, 'userAgent', {
+      get: () => originalNavigator.userAgent,
+      configurable: true,
+    });
+    
+    Object.defineProperty(nav, 'platform', {
+      get: () => originalNavigator.platform,
+      configurable: true,
+    });
+    
+    Object.defineProperty(nav, 'language', {
+      get: () => originalNavigator.language,
+      configurable: true,
+    });
+    
+    navigatorSpoofingEnabled = false;
+  } catch (e) {
+    console.warn("Navigator despoofing failed:", e);
+  }
+}
+
+// ==================== COMBINED SPOOFING ====================
+
+export function enableAllSpoofing(urlObfuscation: boolean, navigatorSpoofing: boolean, fakeUrl?: string, navSettings?: { userAgent?: string; platform?: string; language?: string }) {
+  if (urlObfuscation && fakeUrl) {
+    enableURLBarObfuscation(fakeUrl);
+  }
+  if (navigatorSpoofing && navSettings) {
+    enableNavigatorSpoofing(navSettings);
+  }
+}
+
+export function disableAllSpoofing() {
+  disableURLBarObfuscation();
+  disableNavigatorSpoofing();
+}
+
+// ==================== TAB CLOAKING ====================
+
+let tabCloakingEnabled = false;
+let originalTitle = "";
+let originalFavicon: string | null = null;
+
+export function enableTabCloaking(title: string, faviconUrl: string) {
+  if (tabCloakingEnabled) return;
+  
+  try {
+    originalTitle = document.title;
+    
+    if (title) {
+      document.title = title;
+    }
+    
+    if (faviconUrl) {
+      const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement || document.createElement("link");
+      link.rel = "icon";
+      link.href = faviconUrl;
+      document.head.appendChild(link);
+    }
+    
+    tabCloakingEnabled = true;
+  } catch (e) {
+    console.warn("Tab cloaking failed:", e);
+  }
+}
+
+export function updateTabCloak(title: string, faviconUrl: string) {
+  if (!tabCloakingEnabled) return;
+  
+  try {
+    if (title) {
+      document.title = title;
+    }
+    
+    if (faviconUrl) {
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
+      }
+      link.href = faviconUrl;
+    }
+  } catch (e) {
+    console.warn("Tab cloak update failed:", e);
+  }
+}
+
+export function disableTabCloaking() {
+  if (!tabCloakingEnabled) return;
+  
+  try {
+    document.title = originalTitle;
+    
+    const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+    if (link && link.href) {
+      link.remove();
+    }
+    
+    tabCloakingEnabled = false;
+  } catch (e) {
+    console.warn("Tab decloaking failed:", e);
+  }
 }

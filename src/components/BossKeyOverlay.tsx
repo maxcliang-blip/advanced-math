@@ -2,6 +2,10 @@ import type { BossKeyStyle } from "@/lib/profile";
 import FakeGoogle from "./FakeGoogle";
 import FakeYouTube from "./FakeYouTube";
 import FakeGoogleDocs from "./FakeGoogleDocs";
+import FakeFacebook from "./FakeFacebook";
+import FakeTwitter from "./FakeTwitter";
+import FakeReddit from "./FakeReddit";
+import FakeGmail from "./FakeGmail";
 import Fake404 from "./Fake404";
 
 export type { BossKeyStyle };
@@ -15,11 +19,15 @@ interface BossKeyOverlayProps {
 const BossKeyOverlay = ({ style, customUrl, onDismiss }: BossKeyOverlayProps) => {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 99999, overflow: "auto" }}>
-      {style === "google"  && <FakeGoogle onReveal={onDismiss} />}
-      {style === "youtube" && <FakeYouTube onReveal={onDismiss} />}
-      {style === "docs"    && <FakeGoogleDocs onReveal={onDismiss} />}
-      {style === "404"     && <Fake404 onReveal={onDismiss} />}
-      {style === "custom"  && customUrl && (
+      {style === "google"   && <FakeGoogle onReveal={onDismiss} />}
+      {style === "youtube"  && <FakeYouTube onReveal={onDismiss} />}
+      {style === "docs"     && <FakeGoogleDocs onReveal={onDismiss} />}
+      {style === "facebook" && <FakeFacebook onReveal={onDismiss} />}
+      {style === "twitter"   && <FakeTwitter onReveal={onDismiss} />}
+      {style === "reddit"   && <FakeReddit onReveal={onDismiss} />}
+      {style === "gmail"    && <FakeGmail onReveal={onDismiss} />}
+      {style === "404"      && <Fake404 onReveal={onDismiss} />}
+      {style === "custom"   && customUrl && (
         <iframe
           src={customUrl}
           style={{ width: "100%", height: "100%", border: "none", display: "block" }}

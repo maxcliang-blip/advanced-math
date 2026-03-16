@@ -6,7 +6,8 @@ import {
   TriangleAlert as AlertTriangle, Activity, Ban,
   MousePointerClick, TabletSmartphone, Bomb, Trash2, KeyRound,
   LogOut, BluetoothOff, Printer, Type, Frame, History,
-  Fingerprint, Ghost, ScrollText, MonitorOff, RefreshCw, Crop
+  Fingerprint, Ghost, ScrollText, MonitorOff, RefreshCw, Crop,
+  Link, Globe, Monitor
 } from "lucide-react";
 import {
   loadSecuritySettings,
@@ -434,11 +435,117 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
         />
 
         <ToggleRow
+          icon={<Link className="h-4 w-4 text-primary" />}
+          label="URL Bar Obfuscation"
+          description="Shows fake URL in address bar"
+          settingKey="enableURLBarObfuscation"
+        />
+
+        <ToggleRow
+          icon={<Globe className="h-4 w-4 text-primary" />}
+          label="Navigator Spoofing"
+          description="Spoofs userAgent, platform, and language"
+          settingKey="enableNavigatorSpoofing"
+        />
+
+        <ToggleRow
+          icon={<Monitor className="h-4 w-4 text-primary" />}
+          label="Tab Cloaking"
+          description="Disguises tab title and favicon"
+          settingKey="enableTabCloaking"
+        />
+
+        <ToggleRow
           icon={<History className="h-4 w-4 text-primary" />}
           label="History Scramble on Panic"
           description="Pushes fake history entries on panic so the back button can't reveal CLOAK"
           settingKey="historyScramble"
         />
+
+        {/* Fake URL for URL Bar Obfuscation */}
+        {settings.enableURLBarObfuscation && (
+          <div className="p-3 rounded-lg border border-border bg-secondary/30 ml-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Link className="h-4 w-4 text-primary" />
+              <span className="text-sm font-mono text-foreground">Fake URL</span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              URL to display in the address bar
+            </p>
+            <Input
+              type="text"
+              value={settings.fakeURL}
+              onChange={(e) => updateSetting("fakeURL", e.target.value)}
+              placeholder="https://www.google.com"
+              className="text-xs font-mono h-8"
+            />
+          </div>
+        )}
+
+        {/* Navigator Spoofing Settings */}
+        {settings.enableNavigatorSpoofing && (
+          <div className="p-3 rounded-lg border border-border bg-secondary/30 ml-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Globe className="h-4 w-4 text-primary" />
+              <span className="text-sm font-mono text-foreground">Navigator Spoofing</span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Custom navigator properties
+            </p>
+            <div className="space-y-2">
+              <Input
+                type="text"
+                value={settings.spoofedUserAgent}
+                onChange={(e) => updateSetting("spoofedUserAgent", e.target.value)}
+                placeholder="User Agent"
+                className="text-xs font-mono h-8"
+              />
+              <Input
+                type="text"
+                value={settings.spoofedPlatform}
+                onChange={(e) => updateSetting("spoofedPlatform", e.target.value)}
+                placeholder="Platform (e.g., Win32)"
+                className="text-xs font-mono h-8"
+              />
+              <Input
+                type="text"
+                value={settings.spoofedLanguage}
+                onChange={(e) => updateSetting("spoofedLanguage", e.target.value)}
+                placeholder="Language (e.g., en-US)"
+                className="text-xs font-mono h-8"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Tab Cloaking Settings */}
+        {settings.enableTabCloaking && (
+          <div className="p-3 rounded-lg border border-border bg-secondary/30 ml-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Monitor className="h-4 w-4 text-primary" />
+              <span className="text-sm font-mono text-foreground">Tab Cloak Settings</span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Disguise your tab title and favicon
+            </p>
+            <div className="space-y-2">
+              <Input
+                type="text"
+                value={settings.fakeTitle}
+                onChange={(e) => updateSetting("fakeTitle", e.target.value)}
+                placeholder="Tab Title (e.g., Google)"
+                className="text-xs font-mono h-8"
+              />
+              <Input
+                type="text"
+                value={settings.fakeFavicon}
+                onChange={(e) => updateSetting("fakeFavicon", e.target.value)}
+                placeholder="Favicon URL (optional)"
+                className="text-xs font-mono h-8"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Decoy Password */}
         <div className="p-3 rounded-lg border border-border bg-secondary/30">

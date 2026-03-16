@@ -1,5 +1,5 @@
-export type PanicDestination = "404" | "google" | "youtube" | "docs" | "custom";
-export type BossKeyStyle = "google" | "youtube" | "docs" | "404" | "custom";
+export type PanicDestination = "404" | "google" | "youtube" | "docs" | "facebook" | "twitter" | "reddit" | "gmail" | "custom";
+export type BossKeyStyle = "google" | "youtube" | "docs" | "facebook" | "twitter" | "reddit" | "gmail" | "404" | "custom";
 
 export interface UserProfile {
   displayName: string;
