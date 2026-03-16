@@ -59,6 +59,7 @@ function cloakProxyPlugin(): Plugin {
             "cross-origin-embedder-policy",
             "referrer-policy",
             "strict-transport-security",
+            "referer",
           ]);
 
           for (const [key, val] of proxyRes.headers.entries()) {
@@ -289,16 +290,8 @@ function cloakProxyPlugin(): Plugin {
           }
         } catch (err: unknown) {
           res.statusCode = 502;
-          res.setHeader("Content-Type", "text/html; charset=utf-8");
-          const errMsg = err instanceof Error ? err.message : String(err);
-          res.end("<!DOCTYPE html><html><head><meta charset=\"utf-8\">\n" +
-            "<style>body{font-family:monospace;background:#0f0f0f;color:#ff4444;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;gap:12px;padding:2rem;text-align:center;}h2{font-size:1.1rem;margin:0;}code{background:#1a1a1a;padding:4px 8px;border-radius:4px;font-size:.8rem;color:#aaa;word-break:break-all;}</style>\n" +
-            "</head><body>\n" +
-            "<h2>Proxy Error</h2>\n" +
-            '<p style="color:#aaa;font-size:.85rem;max-width:500px">' + errMsg.replace(/</g,"&lt;") + "</p>\n" +
-            "<code>" + targetUrl.replace(/</g,"&lt;") + "</code>\n" +
-            '<p style="font-size:.75rem;color:#666;margin-top:8px">The site may be blocking server-side requests, or the URL is unreachable.</p>\n' +
-            "</body></html>");
+          res.setHeader("Content-Type", "text/plain; charset=utf-8");
+          res.end("Proxy Error");
         }
       });
     },
