@@ -170,6 +170,8 @@ export function setNetworkLogChangeCallback(callback: (log: NetworkEntry[]) => v
 // ==================== BROWSER FINGERPRINT ====================
 
 export function generateBrowserFingerprint(): string {
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  const win = window as Window & { chrome?: object };
   const components = [
     navigator.userAgent,
     navigator.language,
@@ -177,9 +179,9 @@ export function generateBrowserFingerprint(): string {
     screen.colorDepth,
     new Date().getTimezoneOffset(),
     navigator.hardwareConcurrency || "",
-    navigator.deviceMemory || "",
+    nav.deviceMemory || "",
     !!navigator.webdriver,
-    !!window.chrome,
+    !!win.chrome,
     (navigator as any).permissions?.query?.({ name: "notifications" })?.then?.((r: any) => r.state) || "unknown",
   ];
   
@@ -223,7 +225,9 @@ export function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
-// ==================== FAILED ATTEMPTS ====================export function recordFailedAttempt(): number {
+// ==================== FAILED ATTEMPTS ====================
+
+export function recordFailedAttempt(): number {
   const attempts = getFailedAttempts() + 1;
   localStorage.setItem(FAILED_ATTEMPTS_KEY, attempts.toString());
   return attempts;
@@ -510,15 +514,13 @@ export function disablePrintDisable() {
 export function enableTextSelectionDisable() {
   document.body.style.userSelect = "none";
   document.body.style.webkitUserSelect = "none";
-  document.body.style.msUserSelect = "none";
-  document.body.style.mozUserSelect = "none";
+  (document.body.style as any).mozUserSelect = "none";
 }
 
 export function disableTextSelectionDisable() {
   document.body.style.userSelect = "";
   document.body.style.webkitUserSelect = "";
-  document.body.style.msUserSelect = "";
-  document.body.style.mozUserSelect = "";
+  (document.body.style as any).mozUserSelect = "";
 }
 
 // ==================== IFRAME DETECTION ====================
@@ -592,7 +594,9 @@ export function scrambleHistory() {
   });
 }
 
-// ==================== CLIPBOARD PROTECTION ====================let clipboardInterval: ReturnType<typeof setInterval> | null = null;
+// ==================== CLIPBOARD PROTECTION ====================
+
+let clipboardInterval: ReturnType<typeof setInterval> | null = null;
 
 export function enableClipboardProtection() {
   if (clipboardInterval) return;
@@ -651,7 +655,9 @@ export function disablePanicOnDevToolsDetection() {
   }
 }
 
-// ==================== EMERGENCY WIPE ====================export function emergencyWipe() {
+// ==================== EMERGENCY WIPE ====================
+
+export function emergencyWipe() {
   localStorage.clear();
   sessionStorage.clear();
   addAuditEntry("emergency_wipe", "Emergency data wipe triggered");
@@ -690,7 +696,9 @@ export function disableActivityMonitor() {
   }
 }
 
-// ==================== WEBRTC LEAK PREVENTION ====================let webRTCBlocked = false;
+// ==================== WEBRTC LEAK PREVENTION ====================
+
+let webRTCBlocked = false;
 
 export function enableWebRTCLeakPrevention() {
   if (webRTCBlocked) return;
@@ -725,7 +733,7 @@ export function enableWebRTCLeakPrevention() {
 
 export function disableWebRTCLeakPrevention() {
   webRTCBlocked = false;
-  // Note: Full restoration requires page reload}
+}
 
 // ==================== GEOLOCATION SPOOFING ====================
 
@@ -748,14 +756,15 @@ export function enableGeolocationSpoofing() {
   };
   
   try {
-    const originalGeolocation = navigator.geolocation;
-    navigator.geolocation = {
+    const nav = navigator as Navigator & { geolocation?: Geolocation };
+    const originalGeolocation = nav.geolocation;
+    nav.geolocation = {
       getCurrentPosition: (success: any, error?: any, options?: any) => {
         setTimeout(() => success(spoofedPosition), 100);
       },
       watchPosition: (success: any, error?: any, options?: any) => {
         const id = setInterval(() => success(spoofedPosition), 5000);
-        return id;
+        return id as unknown as number;
       },
       clearWatch: (id: any) => clearInterval(id),
     };
@@ -983,7 +992,9 @@ export function disableBrowserAPIRestrictions() {
   apiRestrictionsEnabled = false;
 }
 
-// ==================== ANTI-MEMORY DUMP ====================let memoryProtectionEnabled = false;
+// ==================== ANTI-MEMORY DUMP ====================
+
+let memoryProtectionEnabled = false;
 
 export function enableMemoryDumpProtection() {
   if (memoryProtectionEnabled) return;
@@ -994,8 +1005,9 @@ export function enableMemoryDumpProtection() {
         window.location.reload();
       }
       
-      if (performance.memory) {
-        const heapUsed = (performance.memory as any).usedJSHeapSize;
+      const perf = performance as Performance & { memory?: { usedJSHeapSize: number } };
+      if (perf.memory) {
+        const heapUsed = perf.memory.usedJSHeapSize;
         if (heapUsed > 100 * 1024 * 1024) {
           console.clear();
         }
@@ -1019,7 +1031,7 @@ export function enableTimingAttackPrevention() {
   if (timingProtectionEnabled) return;
   
   const originalSetTimeout = window.setTimeout;
-  window.setTimeout = function(cb: Function, delay: number, ...args: any[]) {
+  (window as any).setTimeout = function(cb: Function, delay: number, ...args: any[]) {
     const jitter = Math.random() * 100 - 50;
     return originalSetTimeout(cb, Math.max(0, delay + jitter), ...args);
   };
@@ -1040,19 +1052,16 @@ export function enableAudioContextProtection() {
   if (audioContextProtectionEnabled) return;
   
   try {
-    // Store original AudioContext
-    originalAudioContext = window.AudioContext || window.webkitAudioContext;
+    const win = window as Window & { webkitAudioContext?: typeof AudioContext; AudioContext?: typeof AudioContext };
+    originalAudioContext = win.AudioContext || win.webkitAudioContext;
     
     if (originalAudioContext) {
-      // Override AudioContext to add noise or spoof values
       const ProtectedAudioContext = function() {
-        const ctx = new originalAudioContext();
+        const ctx = new (originalAudioContext as any)();
         
-        // Override fingerprinting-prone properties
         const originalGetChannelData = ctx.getChannelData.bind(ctx);
         ctx.getChannelData = function(channel) {
           const data = originalGetChannelData(channel);
-          // Add minimal noise to prevent fingerprinting
           for (let i = 0; i < data.length; i++) {
             data[i] += (Math.random() - 0.5) * 0.0001;
           }
@@ -1062,13 +1071,12 @@ export function enableAudioContextProtection() {
         return ctx;
       };
       
-      // Copy over static properties
       Object.keys(originalAudioContext).forEach(key => {
         ProtectedAudioContext[key] = originalAudioContext[key];
       });
       
-      window.AudioContext = ProtectedAudioContext;
-      window.webkitAudioContext = ProtectedAudioContext;
+      win.AudioContext = ProtectedAudioContext as any;
+      win.webkitAudioContext = ProtectedAudioContext as any;
     }
     
     audioContextProtectionEnabled = true;
@@ -1079,8 +1087,9 @@ export function enableAudioContextProtection() {
 
 export function disableAudioContextProtection() {
   if (!audioContextProtectionEnabled || !originalAudioContext) return;
-    window.AudioContext = originalAudioContext;
-  window.webkitAudioContext = originalAudioContext;
+  const win = window as Window & { webkitAudioContext?: typeof AudioContext; AudioContext?: typeof AudioContext };
+  win.AudioContext = originalAudioContext as any;
+  win.webkitAudioContext = originalAudioContext as any;
   audioContextProtectionEnabled = false;
 }
 
@@ -1092,31 +1101,28 @@ let originalFonts = null;
 export function enableFontEnumerationProtection() {
   if (fontProtectionEnabled) return;
     try {
-    // Store original methods
-    if (document.fonts) {
+    const fonts = document.fonts as any;
+    if (fonts) {
       originalFonts = {
-        check: document.fonts.check.bind(document.fonts),
-        load: document.fonts.load.bind(document.fonts),
-        ready: document.fonts.ready
+        check: fonts.check?.bind(fonts),
+        load: fonts.load?.bind(fonts),
+        ready: fonts.ready
       };
       
-      // Override to return limited/common fonts
-      document.fonts.check = function() {
-        // Return false for most fonts to prevent enumeration
+      fonts.check = function() {
         return false;
       };
       
-      document.fonts.load = function() {
-        // Return a promise that resolves with minimal font info
+      fonts.load = function() {
         return Promise.resolve([]);
       };
     }
     
     // Also protect canvas font measurement
     const originalMeasureText = CanvasRenderingContext2D.prototype.measureText;
+    (CanvasRenderingContext2D.prototype.measureText as any)._original = originalMeasureText;
     CanvasRenderingContext2D.prototype.measureText = function(text) {
       const metrics = originalMeasureText.call(this, text);
-      // Add slight variation to measurements to prevent fingerprinting
       if (metrics.width) {
         metrics.width += (Math.random() - 0.5) * 0.1;
       }
@@ -1132,16 +1138,15 @@ export function enableFontEnumerationProtection() {
 export function disableFontEnumerationProtection() {
   if (!fontProtectionEnabled) return;
   
-  // Restore original font methods
-  if (originalFonts && document.fonts) {
-    document.fonts.check = originalFonts.check;
-    document.fonts.load = originalFonts.load;
-    document.fonts.ready = originalFonts.ready;
+  const fonts = document.fonts as any;
+  if (originalFonts && fonts) {
+    fonts.check = originalFonts.check;
+    fonts.load = originalFonts.load;
+    fonts.ready = originalFonts.ready;
   }
   
-  // Restore canvas measurement
-  if (CanvasRenderingContext2D.prototype.measureText._original) {
-    CanvasRenderingContext2D.prototype.measureText = CanvasRenderingContext2D.prototype.measureText._original;
+  if ((CanvasRenderingContext2D.prototype.measureText as any)._original) {
+    CanvasRenderingContext2D.prototype.measureText = (CanvasRenderingContext2D.prototype.measureText as any)._original;
   }
   
   fontProtectionEnabled = false;
@@ -1358,16 +1363,10 @@ export function enablePermissionPolicy() {
   if (permissionPolicyEnabled) return;
   
   try {
-    // Add Permission Policy header via meta tag (for same-origin requests)
-    // Note: For cross-origin, this needs to be set by server
-    const meta = document.createElement('meta');
+    const meta = document.createElement('meta') as HTMLMetaElement;
     meta.httpEquiv = 'Permissions-Policy';
-    // Restrict sensitive features
     meta.content = 'accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), camera=(), display-capture=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-oob=(), fullscreen=(), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), microphone=(), midi=(), navigation-override=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()';
     document.head.appendChild(meta);
-    
-    // Also try to set via HTTP header for same-origin (if we could control response)
-    // This is limited in client-side, but we can at least attempt to influence
     
     permissionPolicyEnabled = true;
   } catch (e) {
@@ -1378,10 +1377,10 @@ export function enablePermissionPolicy() {
 export function disablePermissionPolicy() {
   if (!permissionPolicyEnabled) return;
   
-  // Remove the meta tag we added
   const metas = document.querySelectorAll('meta[http-equiv="Permissions-Policy"]');
-  metas.forEach(meta => {
-    if (meta.content && meta.content.includes('accelerometer=()')) {
+  metas.forEach((meta) => {
+    const m = meta as HTMLMetaElement;
+    if (m.content && m.content.includes('accelerometer=()')) {
       meta.remove();
     }
   });
@@ -1396,69 +1395,3 @@ export function wipeClipboard() {
     navigator.clipboard.writeText("");
   } catch {}
 }
-
-// ==================== EXPORT ALL FUNCTIONS ====================
-
-// Re-export everything that should be public
-export {
-  loadSecuritySettings,
-  saveSecuritySettings,
-  isDeviceTrusted,
-  setTrustedDevice,
-  clearTrustedDevice,
-  startSession,
-  getSessionDuration,
-  clearSession,
-  recordFailedAttempt,
-  getFailedAttempts,
-  clearFailedAttempts,
-  loadKeystrokePattern,
-  saveKeystrokePattern,
-  clearKeystrokePattern,
-  matchKeystrokePattern,
-  isDecoyPassword,
-  enableDevToolsBlock,
-  disableDevToolsBlock,
-  enableRightClickDisable,
-  disableRightClickDisable,
-  enableTabVisibilityLock,
-  disableTabVisibilityLock,
-  enableMouseLeaveLock,
-  disableMouseLeaveLock,
-  cancelMouseLeaveLock,
-  enableWindowBlurLock,
-  disableWindowBlurLock,
-  enablePrintDisable,
-  disablePrintDisable,
-  enableTextSelectionDisable,
-  disableTextSelectionDisable,
-  enableIframeDetection,
-  disableIframeDetection,
-  scrambleHistory,
-  wipeClipboard,
-  enableScreenshotProtection,
-  disableScreenshotProtection,
-  enableClipboardProtection,
-  disableClipboardProtection,
-  enablePanicOnDevToolsDetection,
-  disablePanicOnDevToolsDetection,
-  emergencyWipe,
-  detectSuspiciousActivity,
-  enableActivityMonitor,
-  disableActivityMonitor,
-  enableWebRTCLeakPrevention,
-  disableWebRTCLeakPrevention,
-  enableGeolocationSpoofing,
-  disableGeolocationSpoofing,
-  enableFingerprintRandomization,
-  disableFingerprintRandomization,
-  enableMediaDeviceMonitoring,
-  disableMediaDeviceMonitoring,
-  enableBrowserAPIRestrictions,
-  disableBrowserAPIRestrictions,
-  enableMemoryDumpProtection,
-  disableMemoryDumpProtection,
-  enableTimingAttackPrevention,
-  disableTimingAttackPrevention,
-  // detectScreenRecording is exported only once below
-};
