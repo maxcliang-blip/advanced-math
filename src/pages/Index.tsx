@@ -31,6 +31,10 @@ import {
   disableIframeDetection,
   enableScreenRecordingDetection,
   disableScreenRecordingDetection,
+  enableReferrerControl,
+  disableReferrerControl,
+  enableCanvasProtection,
+  disableCanvasProtection,
   scrambleHistory,
   wipeClipboard,
   addAuditEntry,
@@ -108,6 +112,8 @@ const Index = () => {
     if (securitySettings.disableTextSelection) enableTextSelectionDisable(); else disableTextSelectionDisable();
     if (securitySettings.iframeDetection)      enableIframeDetection(handlePanic); else disableIframeDetection();
     if (securitySettings.enableScreenRecordingDetection) enableScreenRecordingDetection(handlePanic); else disableScreenRecordingDetection();
+    if (securitySettings.referrerControl !== "none") enableReferrerControl(securitySettings.referrerControl as "strip" | "origin"); else disableReferrerControl();
+    if (securitySettings.enableCanvasProtection) enableCanvasProtection(); else disableCanvasProtection();
 
     return () => {
       disableDevToolsBlock();
@@ -120,6 +126,8 @@ const Index = () => {
       disableTextSelectionDisable();
       disableIframeDetection();
       disableScreenRecordingDetection();
+      disableReferrerControl();
+      disableCanvasProtection();
     };
   }, [state, securitySettings, handlePanic]);
 

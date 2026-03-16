@@ -6,7 +6,7 @@ import {
   TriangleAlert as AlertTriangle, Activity, Ban,
   MousePointerClick, TabletSmartphone, Bomb, Trash2, KeyRound,
   LogOut, BluetoothOff, Printer, Type, Frame, History,
-  Fingerprint, Ghost, ScrollText, MonitorOff
+  Fingerprint, Ghost, ScrollText, MonitorOff, RefreshCw, Crop
 } from "lucide-react";
 import {
   loadSecuritySettings,
@@ -102,12 +102,24 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
     return () => clearInterval(interval);
   }, [settings.enableActivityMonitor]);
 
-  const handleToggle = (key: keyof SecuritySettings) => {
-    const newSettings = { ...settings, [key]: !settings[key] };
-    setSettings(newSettings);
-    saveSecuritySettings(newSettings);
-    onSecurityChange?.(newSettings);
-  };
+    const handleToggle = (key: keyof SecuritySettings) => {
+      // Special handling for referrerControl which cycles through options
+      if (key === "referrerControl") {
+        const options: ("strip" | "origin" | "none")[] = ["strip", "origin", "none"];
+        const currentIndex = options.indexOf(settings.referrerControl as "strip" | "origin" | "none");
+        const nextIndex = (currentIndex + 1) % options.length;
+        const newSettings = { ...settings, referrerControl: options[nextIndex] };
+        setSettings(newSettings);
+        saveSecuritySettings(newSettings);
+        onSecurityChange?.(newSettings);
+      } else {
+        // Boolean toggle for all other settings
+        const newSettings = { ...settings, [key]: !settings[key] };
+        setSettings(newSettings);
+        saveSecuritySettings(newSettings);
+        onSecurityChange?.(newSettings);
+      }
+    };
 
   const handleTimeoutChange = (minutes: number) => {
     const newSettings = { ...settings, sessionTimeout: minutes };
@@ -402,6 +414,23 @@ const SecuritySection = ({ onSecurityChange }: SecuritySectionProps) => {
           label="Screen Recording Detection"
           description="Triggers panic if screen recording or capture is detected (OBS, QuickTime, etc.)"
           settingKey="enableScreenRecordingDetection"
+        />
+
+        <ToggleRow
+          icon={<Type className="h-4 w-4 text-primary" />}
+          label="Referer Header Control"
+          description="Controls HTTP Referer header to prevent leaking browsing history"
+          settingKey="referrerControl"
+          extra={<div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-mono">{settings.referrerControl}</span>
+          </div>}
+        />
+
+        <ToggleRow
+          icon={<Crop className="h-4 w-4 text-primary" />}
+          label="Canvas Fingerprinting Protection"
+          description="Adds noise to canvas output to prevent fingerprinting"
+          settingKey="enableCanvasProtection"
         />
 
         <ToggleRow

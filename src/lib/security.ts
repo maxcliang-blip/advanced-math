@@ -31,19 +31,20 @@ export interface SecuritySettings {
   restrictBrowserAPIs: boolean;
   antiMemoryDump: boolean;
   timingAttackPrevention: boolean;
-  // NEW: Advanced fingerprinting protection
-  protectAudioContext: boolean;
-  protectFontEnumeration: boolean;
-  spoofTimezone: boolean;
-  spoofLanguage: boolean;
-  spoofPlatform: boolean;
-  enablePermissionPolicy: boolean;
 }
 
 export interface AuditEntry {
   type: string;
   detail?: string;
   timestamp: number;
+}
+
+export interface NetworkEntry {
+  url: string;
+  method: string;
+  status?: number;
+  timestamp: number;
+  headers?: Record<string, string>;
 }
 
 export interface KeystrokePattern {
@@ -87,13 +88,6 @@ const defaults: SecuritySettings = {
   restrictBrowserAPIs: false,
   antiMemoryDump: false,
   timingAttackPrevention: false,
-  // NEW: Advanced fingerprinting protection defaults
-  protectAudioContext: false,
-  protectFontEnumeration: false,
-  spoofTimezone: false,
-  spoofLanguage: false,
-  spoofPlatform: false,
-  enablePermissionPolicy: false,
 };
 
 // ==================== AUDIT LOGGING ====================
@@ -136,6 +130,68 @@ export function clearAuditLog() {
 
 export function setAuditLogChangeCallback(callback: (log: AuditEntry[]) => void) {
   onAuditLogChange = callback;
+}
+
+// ==================== NETWORK LOGGING ====================
+
+let networkLog: NetworkEntry[] = [];
+let onNetworkLogChange: ((log: NetworkEntry[]) => void) | null = null;
+
+export function addNetworkEntry(entry: Omit<NetworkEntry, "timestamp">) {
+  const fullEntry: NetworkEntry = {
+    ...entry,
+    timestamp: Date.now(),
+  };
+  const currentLog = getNetworkLog();
+  const updatedLog = [...currentLog, fullEntry];
+  
+  networkLog = updatedLog;
+  
+  if (onNetworkLogChange) {
+    onNetworkLogChange(updatedLog);
+  }
+}
+
+export function getNetworkLog(): NetworkEntry[] {
+  return networkLog;
+}
+
+export function clearNetworkLog() {
+  networkLog = [];
+  if (onNetworkLogChange) {
+    onNetworkLogChange([]);
+  }
+}
+
+export function setNetworkLogChangeCallback(callback: (log: NetworkEntry[]) => void) {
+  onNetworkLogChange = callback;
+}
+
+// ==================== BROWSER FINGERPRINT ====================
+
+export function generateBrowserFingerprint(): string {
+  const components = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + "x" + screen.height,
+    screen.colorDepth,
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || "",
+    navigator.deviceMemory || "",
+    !!navigator.webdriver,
+    !!window.chrome,
+    (navigator as any).permissions?.query?.({ name: "notifications" })?.then?.((r: any) => r.state) || "unknown",
+  ];
+  
+  let hash = 0;
+  const str = components.join("|");
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  
+  return Math.abs(hash).toString(16);
 }
 
 // ==================== DEVICE TRUST ====================
@@ -181,7 +237,104 @@ export function clearFailedAttempts() {
   localStorage.removeItem(FAILED_ATTEMPTS_KEY);
 }
 
-// ==================== SECURITY SETTINGS ====================export function loadSecuritySettings(): SecuritySettings {
+// ==================== REFERER CONTROL ====================
+
+export function enableReferrerControl(policy: "strip" | "origin" | "none" = "strip") {
+  // Store original functions if not already stored
+  if (!(window.fetch as any).__originalFetch) {
+    (window.fetch as any).__originalFetch = window.fetch;
+  }
+  
+  // Override the Referer header for outgoing requests
+  const originalFetch = window.fetch;
+  window.fetch = function(input, init = {}) {
+    const headers = new Headers(init.headers || {});
+    
+    if (policy === "strip") {
+      headers.delete("Referer");
+    } else if (policy === "origin") {
+      try {
+        const url = typeof input === 'string' ? input : (input as Request).url || '';
+        if (url) {
+          const urlObj = new URL(url, window.location.href);
+          headers.set("Referer", urlObj.origin + "/");
+        }
+      } catch {
+        // If we can't parse the URL, fall back to stripping
+        headers.delete("Referer");
+      }
+    }
+    // For "none" policy, we leave the Referer header as-is (default browser behavior)
+    
+    return originalFetch(input, { ...init, headers });
+  };
+  
+  // Also override XMLHttpRequest for compatibility
+  if (!(XMLHttpRequest.prototype as any).__open__) {
+    (XMLHttpRequest.prototype as any).__open__ = XMLHttpRequest.prototype.open;
+    (XMLHttpRequest.prototype as any).__setRequestHeader__ = XMLHttpRequest.prototype.setRequestHeader;
+  }
+  
+  const originalOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url, ...args) {
+    this._url = url; // Store for use in setRequestHeader
+    return originalOpen.apply(this, [method, url, ...args]);
+  };
+  
+  const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+    if (header.toLowerCase() === "referer") {
+      if (this._url) {
+        try {
+          const urlObj = new URL(this._url, window.location.href);
+          if (policy === "strip") {
+            // Don't set the Referer header at all
+            return;
+          } else if (policy === "origin") {
+            value = urlObj.origin + "/";
+          }
+          // For "none" policy, we allow the header to be set normally
+        } catch {
+          // If we can't parse the URL, fall back to stripping for "strip" policy
+          if (policy === "strip") {
+            return;
+          }
+        }
+      }
+      
+      if (policy !== "none") {
+        // For strip policy, we don't set the header
+        // For origin policy, we've already set the value above
+        if (policy === "strip") {
+          return;
+        }
+      }
+    }
+    return originalSetRequestHeader.call(this, header, value);
+  };
+}
+
+export function disableReferrerControl() {
+  // Restore original fetch
+  if ((window.fetch as any).__originalFetch) {
+    window.fetch = (window.fetch as any).__originalFetch;
+    delete (window.fetch as any).__originalFetch;
+  }
+  
+  // Restore original XMLHttpRequest methods
+  if ((XMLHttpRequest.prototype as any).__open__) {
+    XMLHttpRequest.prototype.open = (XMLHttpRequest.prototype as any).__open__;
+    delete (XMLHttpRequest.prototype as any).__open__;
+  }
+  if ((XMLHttpRequest.prototype as any).__setRequestHeader__) {
+    XMLHttpRequest.prototype.setRequestHeader = (XMLHttpRequest.prototype as any).__setRequestHeader__;
+    delete (XMLHttpRequest.prototype as any).__setRequestHeader__;
+  }
+}
+
+// ==================== SECURITY SETTINGS ====================
+
+export function loadSecuritySettings(): SecuritySettings {
   try {
     const stored = JSON.parse(localStorage.getItem(SECURITY_KEY) || "{}");
     return { ...defaults, ...stored };
@@ -350,8 +503,7 @@ export function disablePrintDisable() {
     e.preventDefault();
     return false;
   });
-  
-  // Note: Can't fully restore print without storing original}
+}
 
 // ==================== TEXT SELECTION DISABLE ====================
 
@@ -402,6 +554,25 @@ export function detectScreenRecording(): boolean {
     return data[0] !== 0 || data[1] !== 0 || data[2] !== 0;
   } catch {
     return false;
+  }
+}
+
+let screenRecordingInterval: ReturnType<typeof setInterval> | null = null;
+
+export function enableScreenRecordingDetection(callback: () => void) {
+  if (screenRecordingInterval) return;
+  
+  screenRecordingInterval = setInterval(() => {
+    if (detectScreenRecording()) {
+      callback();
+    }
+  }, 2000);
+}
+
+export function disableScreenRecordingDetection() {
+  if (screenRecordingInterval) {
+    clearInterval(screenRecordingInterval);
+    screenRecordingInterval = null;
   }
 }
 
@@ -554,8 +725,7 @@ export function enableWebRTCLeakPrevention() {
 
 export function disableWebRTCLeakPrevention() {
   webRTCBlocked = false;
-  // Note: Full restoration requires page reload
-}
+  // Note: Full restoration requires page reload}
 
 // ==================== GEOLOCATION SPOOFING ====================
 
@@ -652,6 +822,100 @@ export function disableFingerprintRandomization() {
     clearInterval(fingerprintInterval);
     fingerprintInterval = null;
   }
+}
+
+// ==================== CANVAS FINGERPRINTING PROTECTION ====================
+
+let canvasProtectionEnabled = false;
+let originalToDataURL: any;
+let originalToBlob: any;
+let originalGetImageData: any;
+
+export function enableCanvasProtection() {
+  if (canvasProtectionEnabled) return;
+  
+  try {
+    // Store original methods
+    originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+    originalToBlob = HTMLCanvasElement.prototype.toBlob;
+    originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+    
+    // Override toDataURL to return blank canvas for tracking attempts
+    HTMLCanvasElement.prototype.toDataURL = function(type: string = 'image/png', ...args: any[]): string {
+      // For image types that are commonly used for fingerprinting, return a blank canvas
+      if (type === 'image/png' || type === 'image/jpeg' || type === 'image/webp') {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.width;
+        canvas.height = this.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#ffffff'; // White background
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          return canvas.toDataURL(type);
+        }
+      }
+      // For other types, call original but with potentially modified canvas
+      return originalToDataURL.call(this, type, ...args);
+    };
+    
+    // Override toBlob similarly
+    HTMLCanvasElement.prototype.toBlob = function(callback: BlobCallback, type: string = 'image/png', ...args: any[]): void {
+      if (type === 'image/png' || type === 'image/jpeg' || type === 'image/webp') {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.width;
+        canvas.height = this.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          return canvas.toBlob(callback, type, ...args);
+        }
+      }
+      // For other types, call original
+      return originalToBlob.call(this, callback, type, ...args);
+    };
+    
+    // Override getImageData to return consistent values for fingerprinting attempts
+    CanvasRenderingContext2D.prototype.getImageData = function(sx: number, sy: number, sw: number, sh: number): ImageData {
+      const imageData = originalGetImageData.call(this, sx, sy, sw, sh);
+      
+      // Add slight noise to prevent exact fingerprinting while preserving usability
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        // Add minimal noise to RGB values (preserve alpha)
+        data[i]   = Math.max(0, Math.min(255, data[i]   + (Math.random() - 0.5) * 4)); // Red
+        data[i+1] = Math.max(0, Math.min(255, data[i+1] + (Math.random() - 0.5) * 4)); // Green
+        data[i+2] = Math.max(0, Math.min(255, data[i+2] + (Math.random() - 0.5) * 4)); // Blue
+        // Alpha channel left unchanged
+      }
+      
+      return imageData;
+    };
+    
+    canvasProtectionEnabled = true;
+  } catch (e) {
+    console.warn("Canvas protection failed:", e);
+  }
+}
+
+export function disableCanvasProtection() {
+  if (!canvasProtectionEnabled) return;
+  
+  // Restore original methods
+  if (originalToDataURL) {
+    HTMLCanvasElement.prototype.toDataURL = originalToDataURL;
+  }
+  if (originalToBlob) {
+    HTMLCanvasElement.prototype.toBlob = originalToBlob;
+  }
+  if (originalGetImageData) {
+    CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
+  }
+  
+  canvasProtectionEnabled = false;
+  originalToDataURL = null;
+  originalToBlob = null;
+  originalGetImageData = null;
 }
 
 // ==================== MEDIA DEVICE MONITORING ====================
@@ -1196,18 +1460,5 @@ export {
   disableMemoryDumpProtection,
   enableTimingAttackPrevention,
   disableTimingAttackPrevention,
-  // NEW: Advanced fingerprinting protection
-  enableAudioContextProtection,
-  disableAudioContextProtection,
-  enableFontEnumerationProtection,
-  disableFontEnumerationProtection,
-  enableTimezoneSpoofing,
-  disableTimezoneSpoofing,
-  enableLanguageSpoofing,
-  disableLanguageSpoofing,
-  enablePlatformSpoofing,
-  disablePlatformSpoofing,
-  enablePermissionPolicy,
-  disablePermissionPolicy,
-  detectScreenRecording,
+  // detectScreenRecording is exported only once below
 };

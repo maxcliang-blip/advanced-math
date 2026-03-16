@@ -29,8 +29,8 @@ function cloakProxyPlugin(): Plugin {
               "Accept-Encoding": "gzip, deflate",
               "Cache-Control": "no-cache",
               Pragma: "no-cache",
-              Referer: targetUrlObj.origin + "/",
-              Origin: targetUrlObj.origin,
+              // Important: Do not set Referer or Origin headers here as they can trigger automatic Referer
+              // The client-side enableReferrerControl will handle Referer header manipulation
               "Upgrade-Insecure-Requests": "1",
             },
             redirect: "follow",
