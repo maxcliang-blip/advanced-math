@@ -112,7 +112,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
   const [proxyFullscreen, setProxyFullscreen] = useState(false);
   const [proxyHistory, setProxyHistory] = useState<string[]>([]);
   const [proxyHistoryIndex, setProxyHistoryIndex] = useState(-1);
-  const [proxyMode, setProxyMode] = useState(true); // true = route through /cloak-proxy server
+  const [proxyMode, setProxyMode] = useState(false); // false = direct URL (works on GitHub Pages), true = route through /cloak-proxy server
   const [proxyLoading, setProxyLoading] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
