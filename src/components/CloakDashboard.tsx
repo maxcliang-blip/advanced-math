@@ -112,6 +112,7 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
   const [proxyFullscreen, setProxyFullscreen] = useState(false);
   const [proxyHistory, setProxyHistory] = useState<string[]>([]);
   const [proxyHistoryIndex, setProxyHistoryIndex] = useState(-1);
+  const [proxyLoading, setProxyLoading] = useState(false);
   // Proxy mode: true = server proxy, false = direct
   const [proxyMode, setProxyMode] = useState(() => {
     return typeof window !== "undefined" && window.location.port === "5000";
