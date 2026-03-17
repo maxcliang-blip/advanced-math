@@ -940,11 +940,11 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
         </div>
       </header>
 
-      {/* Browser View */}
+      {/* Browser View - Fullscreen */}
       {activeView === "browser" && (
-        <main className="flex-1 flex flex-col">
+        <main className={`flex flex-col ${proxyFullscreen ? "fixed inset-0 z-40 bg-background" : "flex-1"}`}>
           {/* Browser toolbar */}
-          <div className="border-b border-border px-4 py-2 flex items-center gap-2 bg-secondary/30">
+          <div className={`border-b border-border px-4 py-2 flex items-center gap-2 bg-secondary/30 ${proxyFullscreen ? "border-b-0" : ""}`}>
             <Button variant="ghost" size="sm" onClick={proxyGoBack} disabled={proxyHistoryIndex <= 0} className="h-8">
               ←
             </Button>
@@ -978,10 +978,31 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
             >
               {proxyMode ? "Proxy" : "Direct"}
             </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setProxyFullscreen(!proxyFullscreen)} 
+              className="h-8"
+              title={proxyFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            >
+              {proxyFullscreen ? "⊡" : "⛶"}
+            </Button>
           </div>
           
-          {/* Browser iframe */}
-          <div className="flex-1 bg-white relative">
+          {/* Browser iframe - full screen when enabled */}
+          <div className={`flex-1 bg-white relative ${proxyFullscreen ? "fixed inset-0 z-50" : ""}`}>
+            {proxyFullscreen && (
+              <div className="absolute top-2 right-12 z-50">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => setProxyFullscreen(false)}
+                  className="h-8"
+                >
+                  ✕ Exit
+                </Button>
+              </div>
+            )}
             {proxyActive && proxyUrl ? (
               <iframe
                 ref={iframeRef}
