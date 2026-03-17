@@ -8,8 +8,10 @@ import SecuritySection from "@/components/SecuritySection";
 import AdvancedSecurityPanel from "@/components/AdvancedSecurityPanel";
 import { loadProfile, type UserProfile } from "@/lib/profile";
 import { themes, loadTheme, applyTheme } from "@/lib/themes";
+import { encryptUrl, decryptUrl, encryptData, decryptData } from "@/lib/encryption";
 import { tabPresets, applyCloakPreset, loadActiveCloak, clearCloak, loadCustomPresets, addCustomPreset, removeCustomPreset, type TabPreset } from "@/lib/tabCloak";
 import PomodoroTimer from "@/components/PomodoroTimer";
+import PrivacyTools from "@/components/PrivacyTools";
 import {
   loadSecuritySettings,
   type SecuritySettings,
@@ -81,14 +83,32 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
   const [url, setUrl] = useState("");
   const [tabTitle, setTabTitle] = useState("Google");
   const [tabIcon, setTabIcon] = useState("https://www.google.com/favicon.ico");
-  const [history, setHistory] = useState<{ url: string; title: string; time: number }[]>(() => {
-    try { return JSON.parse(localStorage.getItem("cloak_history") || "[]"); } catch { return []; }
-  });
+  
+  // Load encrypted history
+  const loadEncryptedHistory = () => {
+    try {
+      const stored = localStorage.getItem("cloak_history") || "[]";
+      const parsed = JSON.parse(stored);
+      return parsed.map((h: { url: string; title: string; time: number }) => ({
+        ...h,
+        url: decryptUrl(h.url) || h.url
+      }));
+    } catch { return []; }
+  };
+  const [history, setHistory] = useState<{ url: string; title: string; time: number }[]>(loadEncryptedHistory);
 
-  // Bookmarks with folders
-  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
-    try { return JSON.parse(localStorage.getItem("cloak_bookmarks_v2") || "[]"); } catch { return []; }
-  });
+  // Load encrypted bookmarks
+  const loadEncryptedBookmarks = () => {
+    try {
+      const stored = localStorage.getItem("cloak_bookmarks_v2") || "[]";
+      const parsed = JSON.parse(stored);
+      return parsed.map((b: BookmarkItem) => ({
+        ...b,
+        url: decryptUrl(b.url) || b.url
+      }));
+    } catch { return []; }
+  };
+  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(loadEncryptedBookmarks);
   const [bookmarkFolders, setBookmarkFolders] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("cloak_bm_folders") || '["General"]'); } catch { return ["General"]; }
   });
@@ -110,7 +130,16 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
   const [proxyInput, setProxyInput] = useState("");
   const [proxyActive, setProxyActive] = useState(false);
   const [proxyFullscreen, setProxyFullscreen] = useState(false);
-  const [proxyHistory, setProxyHistory] = useState<string[]>([]);
+  
+  // Load encrypted proxy history
+  const loadProxyHistory = () => {
+    try {
+      const stored = localStorage.getItem("cloak_proxy_history") || "[]";
+      const parsed = JSON.parse(stored);
+      return parsed.map((url: string) => decryptUrl(url) || url);
+    } catch { return []; }
+  };
+  const [proxyHistory, setProxyHistory] = useState<string[]>(loadProxyHistory);
   const [proxyHistoryIndex, setProxyHistoryIndex] = useState(-1);
   const [proxyLoading, setProxyLoading] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -431,8 +460,30 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
     return () => window.removeEventListener("beforeunload", handleUnload);
   }, [incognito]);
 
-  useEffect(() => { if (!incognito) localStorage.setItem("cloak_history", JSON.stringify(history)); }, [history, incognito]);
-  useEffect(() => { if (!incognito) localStorage.setItem("cloak_bookmarks_v2", JSON.stringify(bookmarks)); }, [bookmarks, incognito]);
+  useEffect(() => { 
+    if (!incognito) {
+      const encryptedHistory = history.map(h => ({
+        ...h,
+        url: encryptUrl(h.url)
+      }));
+      localStorage.setItem("cloak_history", JSON.stringify(encryptedHistory)); 
+    }
+  }, [history, incognito]);
+  useEffect(() => { 
+    if (!incognito) {
+      const encryptedBookmarks = bookmarks.map(b => ({
+        ...b,
+        url: encryptUrl(b.url)
+      }));
+      localStorage.setItem("cloak_bookmarks_v2", JSON.stringify(encryptedBookmarks)); 
+    }
+  }, [bookmarks, incognito]);
+  useEffect(() => { 
+    if (!incognito && proxyHistory.length > 0) {
+      const encrypted = proxyHistory.map(url => encryptUrl(url));
+      localStorage.setItem("cloak_proxy_history", JSON.stringify(encrypted));
+    }
+  }, [proxyHistory, incognito]);
   useEffect(() => { if (!incognito) localStorage.setItem("cloak_bm_folders", JSON.stringify(bookmarkFolders)); }, [bookmarkFolders, incognito]);
   useEffect(() => { localStorage.setItem("cloak_incognito", String(incognito)); }, [incognito]);
 
@@ -1108,249 +1159,8 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
               </div>
             </section>
 
-            {/* Site Blocker */}
-            <section className="space-y-4 border-t border-border pt-6">
-              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                <Ban className="h-4 w-4" /> Site Blocker
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Block distracting sites — they won't load in the proxy browser or cloaked tabs.
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  value={newBlockedSite}
-                  onChange={(e) => setNewBlockedSite(e.target.value)}
-                  placeholder="e.g. tiktok.com, instagram.com"
-                  className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono text-sm"
-                  onKeyDown={(e) => e.key === "Enter" && addBlockedSite()}
-                />
-                <Button
-                  onClick={addBlockedSite}
-                  variant="outline"
-                  size="sm"
-                  className="border-border text-muted-foreground hover:text-primary hover:border-primary font-mono"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Block
-                </Button>
-              </div>
-              {blockedSites.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {blockedSites.map((site) => (
-                    <div
-                      key={site}
-                      className="flex items-center gap-1.5 bg-destructive/10 border border-destructive/30 rounded px-2.5 py-1 text-xs font-mono text-destructive"
-                    >
-                      <Ban className="h-3 w-3" />
-                      {site}
-                      <button
-                        onClick={() => setBlockedSites((prev) => prev.filter((s) => s !== site))}
-                        className="hover:text-foreground ml-1"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* Cloak URL */}
-            <section className="space-y-4 border-t border-border pt-6">
-              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                <ExternalLink className="h-4 w-4" /> Open in Cloaked Tab
-              </h2>
-              <div className="flex gap-2">
-                <Input
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://example.com"
-                  className="bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
-                  onKeyDown={(e) => e.key === "Enter" && openCloaked()}
-                />
-                <Button
-                  onClick={openCloaked}
-                  className="bg-primary text-primary-foreground hover:bg-primary/80 glow-box font-mono"
-                >
-                  CLOAK
-                </Button>
-                <Button
-                  onClick={addBookmark}
-                  variant="outline"
-                  size="icon"
-                  className="border-border text-muted-foreground hover:text-primary hover:border-primary"
-                  title="Bookmark this URL"
-                >
-                  <BookmarkPlus className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Opens URL inside an about:blank tab with a disguised title & icon
-              </p>
-            </section>
-
-            {/* History */}
-            {history.length > 0 && (
-              <section className="space-y-4 border-t border-border pt-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <Clock className="h-4 w-4" /> Recent History
-                  </h2>
-                  <Button
-                    onClick={clearHistory}
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs font-mono text-muted-foreground hover:text-destructive"
-                  >
-                    Clear All
-                  </Button>
-                </div>
-                <div className="space-y-1">
-                  {history.map((h) => (
-                    <div
-                      key={h.url + h.time}
-                      className="flex items-center gap-2 group rounded px-2 py-1.5 hover:bg-secondary"
-                    >
-                      <button
-                        onClick={() => { setProxyInput(h.url); navigateProxy(h.url); }}
-                        className="flex-1 text-left text-sm font-mono text-foreground truncate hover:text-primary transition-colors"
-                      >
-                        {h.url}
-                      </button>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(h.time).toLocaleDateString()}
-                      </span>
-                      <Button
-                        onClick={() => removeFromHistory(h.url)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Bookmarks with Folders */}
-            <section className="space-y-4 border-t border-border pt-6">
-              <h2 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                <Bookmark className="h-4 w-4" /> Bookmarks
-              </h2>
-
-              {/* Folder tabs */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {bookmarkFolders.map((folder) => (
-                  <div key={folder} className="group flex items-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setActiveFolder(folder)}
-                      className={`text-xs font-mono border-border hover:border-primary ${
-                        activeFolder === folder ? "text-primary border-primary bg-secondary" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Folder className="h-3 w-3 mr-1" />
-                      {folder}
-                      {folder !== "General" && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); removeFolder(folder); }}
-                          className="ml-1 opacity-0 group-hover:opacity-100 hover:text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </Button>
-                  </div>
-                ))}
-                {addingFolder ? (
-                  <form onSubmit={(e) => { e.preventDefault(); addFolder(); }} className="flex items-center gap-1">
-                    <Input
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
-                      className="h-8 w-28 text-xs font-mono bg-secondary border-primary px-2"
-                      placeholder="Folder name"
-                      autoFocus
-                      onBlur={() => { if (!newFolderName) setAddingFolder(false); }}
-                    />
-                    <Button type="submit" variant="ghost" size="sm" className="h-7 w-7 p-0 text-primary">
-                      <Check className="h-3 w-3" />
-                    </Button>
-                  </form>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAddingFolder(true)}
-                    className="h-8 text-xs text-muted-foreground hover:text-primary"
-                  >
-                    <FolderPlus className="h-3 w-3 mr-1" /> Add Folder
-                  </Button>
-                )}
-              </div>
-
-              {/* Bookmarks in active folder */}
-              {filteredBookmarks.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {filteredBookmarks.map((b) => (
-                    <div key={b.url} className="group flex items-center gap-1 bg-secondary rounded px-3 py-1.5 border border-border hover:border-primary transition-colors">
-                      {editingBookmark === b.url ? (
-                        <form
-                          className="flex items-center gap-1"
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            renameBookmark(b.url, editLabel || b.label);
-                            setEditingBookmark(null);
-                          }}
-                        >
-                          <Input
-                            value={editLabel}
-                            onChange={(e) => setEditLabel(e.target.value)}
-                            className="h-6 w-32 text-xs font-mono bg-background border-primary px-1"
-                            autoFocus
-                            onBlur={() => {
-                              renameBookmark(b.url, editLabel || b.label);
-                              setEditingBookmark(null);
-                            }}
-                          />
-                          <Button type="submit" variant="ghost" size="sm" className="h-5 w-5 p-0 text-primary">
-                            <Check className="h-3 w-3" />
-                          </Button>
-                        </form>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => { setProxyInput(b.url); navigateProxy(b.url); }}
-                            className="text-sm font-mono text-foreground hover:text-primary transition-colors truncate max-w-[200px]"
-                          >
-                            {b.label}
-                          </button>
-                          <Button
-                            onClick={() => { setEditingBookmark(b.url); setEditLabel(b.label); }}
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        onClick={() => removeBookmark(b.url)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground font-mono">No bookmarks in "{activeFolder}" — use the <BookmarkPlus className="inline h-3 w-3" /> button to add one</p>
-              )}
-            </section>
+            {/* Privacy Tools */}
+            <PrivacyTools />
           </TabsContent>
 
           {/* ===== TOOLS TAB ===== */}
