@@ -117,6 +117,9 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
     return typeof window !== "undefined" && window.location.port === "5000";
   });
 
+  // UI tabs: "dashboard" or "browser"
+  const [activeView, setActiveView] = useState<"dashboard" | "browser">("dashboard");
+
   const buildIframeSrc = (rawUrl: string) => {
     if (!proxyMode) return rawUrl;
     
