@@ -144,10 +144,21 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
   const [proxyLoading, setProxyLoading] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
-  // Proxy mode: true = server proxy, false = direct
-  const [proxyMode, setProxyMode] = useState(() => {
-    return typeof window !== "undefined" && window.location.port === "5000";
-  });
+  // Proxy mode: default based on available proxy
+  const getDefaultProxyMode = () => {
+    if (typeof window === "undefined") return false;
+    // Check for custom proxy in localStorage
+    try {
+      const stored = localStorage.getItem("cloak_profile");
+      if (stored) {
+        const p = JSON.parse(stored);
+        if (p.customProxyUrl) return true;
+      }
+    } catch {}
+    // Enable on dev server
+    return window.location.port === "5000";
+  };
+  const [proxyMode, setProxyMode] = useState(getDefaultProxyMode);
 
   // UI tabs: "dashboard" or "browser"
   const [activeView, setActiveView] = useState<"dashboard" | "browser">("dashboard");
@@ -161,8 +172,13 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
       return `${profile.customProxyUrl}${separator}url=${encodeURIComponent(rawUrl)}`;
     }
     
-    // Use built-in server proxy (dev mode only)
-    return `/cloak-proxy?url=${encodeURIComponent(rawUrl)}`;
+    // Use built-in server proxy ONLY if on dev server (port 5000)
+    if (typeof window !== "undefined" && window.location.port === "5000") {
+      return `/cloak-proxy?url=${encodeURIComponent(rawUrl)}`;
+    }
+    
+    // Fallback to direct URL if no proxy available
+    return rawUrl;
   };
 
   // Extract real URL from a proxied iframe URL
@@ -942,9 +958,55 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
 
       {/* Browser View - Fullscreen */}
       {activeView === "browser" && (
-        <main className={`flex flex-col ${proxyFullscreen ? "fixed inset-0 z-40 bg-background" : "flex-1"}`}>
-          {/* Browser toolbar */}
-          <div className={`border-b border-border px-4 py-2 flex items-center gap-2 bg-secondary/30 ${proxyFullscreen ? "border-b-0" : ""}`}>
+        <main className={`flex flex-col ${proxyFullscreen ? "fixed inset-0 z-40 bg-black" : "flex-1"}`}>
+          {/* Floating toolbar in fullscreen */}
+          {proxyFullscreen ? (
+            <div className="absolute top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm px-4 py-2 flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={proxyGoBack} disabled={proxyHistoryIndex <= 0} className="h-8 text-white hover:bg-white/20">
+                ←
+              </Button>
+              <Button variant="ghost" size="sm" onClick={proxyGoForward} disabled={proxyHistoryIndex >= proxyHistory.length - 1} className="h-8 text-white hover:bg-white/20">
+                →
+              </Button>
+              <Button variant="ghost" size="sm" onClick={proxyRefresh} className="h-8 text-white hover:bg-white/20">
+                ↻
+              </Button>
+              <form onSubmit={(e) => { e.preventDefault(); navigateProxy(); }} className="flex-1 flex items-center gap-2">
+                <div className="flex-1 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 flex items-center gap-2">
+                  {proxyLoading && <span className="animate-spin text-white">◌</span>}
+                  <input
+                    type="text"
+                    value={proxyInput}
+                    onChange={(e) => setProxyInput(e.target.value)}
+                    placeholder="Enter URL or search..."
+                    className="bg-transparent outline-none flex-1 text-sm text-white placeholder:text-white/50"
+                  />
+                </div>
+                <Button type="submit" size="sm" className="rounded-full">
+                  Go
+                </Button>
+              </form>
+              <Button
+                variant={proxyMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setProxyMode(!proxyMode)}
+                className="font-mono text-xs"
+              >
+                {proxyMode ? "Proxy" : "Direct"}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setProxyFullscreen(false)} 
+                className="h-8 text-white hover:bg-white/20"
+                title="Exit fullscreen"
+              >
+                ✕
+              </Button>
+            </div>
+          ) : (
+          /* Normal toolbar */
+          <div className="border-b border-border px-4 py-2 flex items-center gap-2 bg-secondary/30">
             <Button variant="ghost" size="sm" onClick={proxyGoBack} disabled={proxyHistoryIndex <= 0} className="h-8">
               ←
             </Button>
@@ -978,31 +1040,11 @@ const CloakDashboard = ({ onPanic, onLogout, onProfileChange, onSecurityChange }
             >
               {proxyMode ? "Proxy" : "Direct"}
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setProxyFullscreen(!proxyFullscreen)} 
-              className="h-8"
-              title={proxyFullscreen ? "Exit fullscreen" : "Fullscreen"}
-            >
-              {proxyFullscreen ? "⊡" : "⛶"}
-            </Button>
           </div>
+          )}
           
-          {/* Browser iframe - full screen when enabled */}
-          <div className={`flex-1 bg-white relative ${proxyFullscreen ? "fixed inset-0 z-50" : ""}`}>
-            {proxyFullscreen && (
-              <div className="absolute top-2 right-12 z-50">
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  onClick={() => setProxyFullscreen(false)}
-                  className="h-8"
-                >
-                  ✕ Exit
-                </Button>
-              </div>
-            )}
+          {/* Browser iframe */}
+          <div className={`flex-1 bg-white relative ${proxyFullscreen ? "pt-12" : ""}`}>
             {proxyActive && proxyUrl ? (
               <iframe
                 ref={iframeRef}
